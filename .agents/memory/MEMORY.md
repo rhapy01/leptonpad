@@ -1,0 +1,2 @@
+- [Clerk version compatibility](clerk-versions.md) — @clerk/react must be 6.x with @clerk/express; 5.x has incompatible export names
+- [Clerk clerkClient singleton](clerk-client-singleton.md) — clerkClient from @clerk/express is a pre-instantiated singleton, not a factory function

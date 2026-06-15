@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "LeptonPad"
+version = "1.0.0"
+id = "artifacts/leptonpad"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25139
+
+[services.development]
+run = "pnpm --filter @workspace/leptonpad run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/leptonpad", "run", "build" ]
+publicDir = "artifacts/leptonpad/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25139"
+BASE_PATH = "/"

@@ -1,0 +1,279 @@
+Here is the complete full prompt:
+
+---
+
+**LeptonPad — Complete Product Brief**
+
+LeptonPad is a brand new multi-format content publishing platform built from scratch for the Lepton Agents Hackathon by Canteen × Circle. Creators publish articles, audio, and video. Readers pay per piece in USDC. Creators keep 95% of every payment instantly. The platform keeps 5%. Nothing is bundled into subscriptions. Every piece of content is its own transaction, settled in under 500 milliseconds on Arc, Circle's purpose-built blockchain.
+
+The name comes from the Lepton — the smallest coin of the ancient Greek world. The tagline is: Publish anything. Get paid per piece. Keep 95%. Settled instantly in USDC on Arc.
+
+---
+
+**Brand Identity and Visual Design**
+
+LeptonPad has a distinct, considered visual identity that signals seriousness, creativity, and financial sophistication without feeling like a crypto product or a generic SaaS dashboard.
+
+The primary color is a deep midnight ink — almost black but with a slight blue undertone, around #0D0F14. This is the background of the main platform. It gives the platform a premium, focused feel, like a high-end editorial publication rather than a social feed.
+
+The accent color is a warm electric gold — around #F5C842. This is the color of value, of the lepton coin, of USDC flowing. It is used for prices, earnings numbers, unlock buttons, payment confirmations, and anything related to money moving. It should feel like something lighting up when value transfers.
+
+The secondary accent is a cool muted teal — around #2DD4BF. This is used for interactive elements, links, category badges, and hover states. It provides contrast against the dark background without competing with the gold.
+
+Text on the main platform is a soft off-white — around #E8EAF0 — never pure white, which would be too harsh against the dark background. Secondary text, metadata, timestamps, and labels use a muted grey around #6B7280.
+
+Card backgrounds sit slightly above the main background — around #161820 — giving content cards a subtle lift without heavy borders or shadows.
+
+The typography uses a clean geometric sans-serif for all UI elements, navigation, labels, prices, and buttons. Something like Inter or Geist. Precise, modern, legible at small sizes.
+
+The overall platform feeling is dark, premium, focused. Like reading a well-designed financial terminal crossed with a serious editorial publication. Not playful. Not corporate. Confident and calm.
+
+---
+
+**The Homepage — Before Signup**
+
+The homepage has its own design language that is deliberately different from the rest of the platform. Where the main platform is dark and modern, the homepage is classical editorial. It should feel like opening a broadsheet newspaper from a very good era of print — the Financial Times, The Economist, or the Paris Review — translated faithfully to the web without losing any of the gravitas.
+
+The homepage background is warm paper white — around #F7F3EC. Not bright white. The color of good newsprint, of cream laid paper, of a page that has been thought about. This warmth immediately signals that LeptonPad takes writing and publishing seriously.
+
+The typography on the homepage is entirely serif. The masthead — the LeptonPad name at the very top — is set in a classic editorial serif, large and authoritative, the way a newspaper nameplate sits at the top of a broadsheet. Think of the weight and presence of a Times or a Chronicle masthead. Beneath the masthead, a thin horizontal rule runs the full width of the page — the kind of rule that separates a newspaper's nameplate from its content. This single line does enormous work. It signals that what follows is serious.
+
+The layout uses a classical editorial grid. A wide primary column on the left for the main hero story or feature, a narrower column on the right for secondary items. Below that, a three or four column grid of smaller items. This is exactly how a front page of a serious newspaper is laid out, and it immediately communicates that LeptonPad is a place where content matters.
+
+The hero section of the homepage features a large editorial headline — the platform's main proposition — set in the same heavyweight serif at around 48 to 56 pixels. It reads like a front page story, not a startup tagline. Below the headline, a single deck — newspaper terminology for the explanatory line beneath a headline — in a smaller serif, explaining what LeptonPad is in one calm sentence.
+
+The call to action buttons — Start Publishing and Start Reading — are not the rounded pill buttons of modern SaaS. They are rectangular, with a thin border, set in small caps or a refined weight of the serif. One is filled with a deep ink color, one is outlined. They feel like the kind of button a serious publication would design — restrained, confident, not trying to sell you anything.
+
+The color accents on the homepage are used extremely sparingly. The gold appears only where money is mentioned — the 95% figure, the price examples, the live earnings counter. Everything else is ink on paper. Black text, warm white background, thin rules and borders, generous whitespace. The teal does not appear on the homepage at all.
+
+Section dividers between homepage sections are thin horizontal rules — the same as the masthead rule — rather than space alone or colored bands. Above each section, a small all-caps label in a condensed serif — like a newspaper section header reading FEATURES or FOR CREATORS or HOW IT WORKS — sits flush left above the rule.
+
+The homepage shows a live counter of total USDC paid to creators on the platform, updating in real time. This is presented not as a flashy metric but as a quiet editorial fact — a single line of text in the serif, like a newspaper dateline, reading something like: $1,247.83 USDC paid to creators since June 15, 2026.
+
+Below the hero, three short editorial sections explain the platform, each introduced by an all-caps section label and a horizontal rule. One for readers — pay only for what you actually want, nothing bundled. One for creators — keep 95%, get paid instantly in USDC, no waiting for payout cycles. One for the technology — settled in under 500 milliseconds on Arc, the smallest payment is $0.000001.
+
+At the bottom of the homepage before the footer, a two-column layout shows a preview of the two signature experiences. On the left, a preview of the creator earnings dashboard with gold numbers — presented like a newspaper advertisement for the platform's creator tools. On the right, a preview of the reading mode — the warm cream environment with beautiful typography — presented like a pull quote from a reader's experience.
+
+The footer continues the editorial tradition. It is set in a smaller size of the same serif, with columns organized like a newspaper's index — platform links, creator links, legal links — separated by thin vertical rules. The LeptonPad name appears again in the footer, smaller, with the tagline beneath it.
+
+The overall feeling of the homepage should be: this is a serious place for serious content. A reader landing here should feel the same quiet confidence they feel picking up a well-made print publication. They should feel that the people who built this care deeply about writing and about paying writers properly. The technology — the USDC, the Arc blockchain, the nanopayments — is mentioned but never celebrated for its own sake. It is presented the way a good newspaper presents its printing technology: as infrastructure in service of the content, not the point in itself.
+
+The transition from the homepage into the platform — when a reader signs up and lands on the dark feed — should feel like walking from the lobby of an old editorial building into a modern newsroom. The heritage is visible in one, the work happens in the other.
+
+---
+
+**The Reading Mode — Completely Separate Experience**
+
+This is the most important design element of LeptonPad and must be treated as a completely distinct experience from the rest of the platform. When a reader unlocks an article and enters reading mode, they leave the platform entirely in visual terms. Everything that made it feel like an app disappears.
+
+Reading mode has its own design language, its own color palette, its own typography, and its own set of rules. It exists for one purpose only: to make reading as comfortable, focused, and pleasurable as possible.
+
+The reading mode background shifts completely from the dark platform to a warm soft cream — around #FAF7F2. This is not white. It is the color of aged paper, of good books, of afternoon light on a page. It immediately signals to the reader that they have entered a different space.
+
+The reading mode text is a deep warm charcoal — around #1C1917 — not pure black. The combination of cream background and warm charcoal text eliminates the harshness of black-on-white while maintaining perfect readability.
+
+The reading mode typography switches from the UI sans-serif to a carefully chosen serif typeface — something like Lora, Playfair Display, or Georgia — set at a generous size, around 19 to 21 pixels on desktop, with a line height of 1.8 to 1.9. The measure — the width of the text column — is constrained to around 680 pixels maximum, which is the scientifically optimal line length for comfortable reading. Wide screens will show generous whitespace on both sides. This whitespace is intentional and should never be filled.
+
+The reading mode has almost no chrome. The platform navigation disappears entirely. The header is replaced by a minimal floating bar at the very top that shows only three things: the LeptonPad logo mark — small, unobtrusive — a reading progress bar that fills from left to right as the reader scrolls, and an exit button that returns them to the feed. That is all. Nothing else competes for attention.
+
+At the very start of the article, before the body text begins, reading mode shows: the article title in a large, beautiful serif heading — around 36 to 42 pixels — the creator's name and small profile photo, the category, the estimated reading time calculated automatically from word count, and the date published. These are presented with generous spacing and feel like the opening of a book, not a blog post.
+
+The reading mode has a dark mode toggle — a small moon icon in the floating header. When toggled, the cream background shifts to a very dark warm grey — around #1A1814 — and the text shifts to a warm off-white — around #E8E3DB. This is not the same dark as the main platform. It is warmer, softer, optimized for reading in low light rather than for visual branding.
+
+Reading mode supports three font size options — small, medium, large — accessible from a small text icon in the floating header. These adjust the body text size and line height proportionally.
+
+Reading mode has no sidebar. No related content. No comments section visible while reading. No social sharing buttons cluttering the margins. The only thing present at the end of the article is: a thank you line to the creator, a button to tip the creator an additional amount in USDC if the reader chooses, and a single button to return to the feed. Any social sharing or discovery features appear only after the reader explicitly returns to the feed.
+
+Images within articles are displayed edge to edge of the content column, with generous spacing above and below. Captions are set in a smaller italic serif, centered, in muted grey.
+
+Blockquotes are styled with a left border in the warm gold accent color — a single visual thread connecting reading mode back to the platform's identity — and indented text in a slightly lighter shade.
+
+Code blocks within articles — for the Tech and Development category — switch back to a monospace font on a slightly darker cream background, maintaining the warm reading environment while signaling a shift in content type.
+
+The reading progress bar at the top is the gold accent color, thin — about 3 pixels — and fills smoothly as the reader scrolls. It is the only persistent visual reminder of the platform while reading.
+
+After the article is finished, before the return to feed button, a subtle transition begins reversing the opening animation — the cream fades and the dark platform returns — like closing a book and returning to the world.
+
+Everything in reading mode has been designed to make the reader forget they are using an app and feel like they are reading something that deserves their full attention. This is LeptonPad's signature experience and must be unmatched.
+
+---
+
+**The Five Content Categories**
+
+Every piece of content on LeptonPad belongs to exactly one category. Every reader selects which categories they care about when they sign up. The feed only shows content matching their selections. The five categories are:
+
+Crypto and Web3. Music and Audio. Independent Writing. Video and Film. Tech and Development.
+
+This is not an algorithm. It is a simple filter. What the reader said they wanted is exactly what they see, ordered by newest first. Nothing more complicated than that.
+
+---
+
+**The Reader Journey — Every Step**
+
+A person hears about LeptonPad, clicks a link, and lands on the homepage. The homepage explains the platform in plain language. They click Start Reading.
+
+They land on the signup screen. Clean, minimal. Name, email, password. Or continue with Google. The background transitions from the warm homepage cream to the dark platform color, signaling they are entering the product. The form sits centered in a card with a subtle border. The Sign Up button is gold.
+
+Account created. Immediately, before they see any content, they land on the onboarding screen. Full screen. Dark background. Large warm text at the top: What do you want to see on LeptonPad? Below it, five large selectable tiles — one per category — each with a small icon, the category name, and a one-line description. When selected, a tile highlights with a gold border and a subtle gold fill. They must select at least one. The Continue button remains inactive until they do. When they click Continue the button turns gold and they proceed.
+
+They land on their feed. The feed is a clean grid of content cards on the dark background. Each card shows the creator's small profile photo and name, the content title, a content type badge in teal — Article, Audio, or Video — the category name, the price in gold, and a muted timestamp. Free content shows a Free badge in soft green instead of a price.
+
+They scroll and find something interesting. They click the card. They land on the content page.
+
+The content page is still in the dark platform design. It shows the creator's profile photo and name prominently at the top, the full title, the category, the price, and below that a clearly marked preview section. The preview shows the first paragraph for articles, the first thirty seconds for audio with a waveform player, or a thumbnail and description for video. A clear visual divider shows where the preview ends and the locked content begins.
+
+Below the preview is the paywall. Clean and unintimidating. It shows the price in large gold text. Below that a single button: Unlock for $0.05 USDC. Below the button in small grey text: 95% goes directly to this creator. Settled in under a second.
+
+The reader clicks Unlock. If they have never set up their Gateway wallet, a modal appears — not a new page, just an overlay — guiding them through the one-time wallet top-up process. Once complete, the modal closes and the payment processes automatically.
+
+The payment processes in under 500 milliseconds. The paywall dissolves. For audio and video, the full player appears immediately in place. For articles, the full text appears and simultaneously a transition animation plays — the dark platform background fades and the warm cream reading mode environment fades in, as if the reader is opening a book. The reading mode takes over the full screen.
+
+The reader reads the article in the beautiful reading mode environment. When finished, they click the exit button in the floating header and the cream fades back to the dark platform as they return to the feed.
+
+Below the content on return, a small message appears: You just paid this creator directly. A copy link button sits beneath it to share.
+
+In their profile they can see their purchase history — every piece they have paid for, when, and how much — and they can edit their interest categories at any time from settings.
+
+---
+
+**The Creator Journey — Every Step**
+
+A person wants to publish and earn. They land on the homepage and click Start Publishing. They go through the same signup and onboarding flow as a reader — because creators are also members of the reading community.
+
+After onboarding they land on the feed. In the navigation they see a Create button. They click it.
+
+They land on the publish form. The form is clean and unhurried. Large fields, generous spacing, clear labels. It asks in sequence: What is the title? What type of content is this — Article, Audio, or Video? Which category does it belong to? If Article, they see a full-screen distraction-free text editor with minimal formatting tools: bold, italic, headings, blockquote, image upload, code block. If Audio, they see a file upload area or URL field. If Video, they see a URL field.
+
+Below the content area, a pricing section. The field label says: What do you want to charge per piece in USDC? Below the field: You keep 95% of every payment. Minimum $0.000001. Set to 0 to publish free.
+
+Beside the price field is a button: Get AI Price Suggestion. The creator clicks it. A small panel slides in beside the form showing the AI's suggested price and beneath it a single sentence of plain English reasoning. The creator can click Accept Suggestion or ignore it and enter their own price.
+
+They click Publish. Their content goes live immediately. They are taken to their published content page where they can see exactly how it looks to a reader, including the paywall and the preview cutoff.
+
+They navigate to their Earnings dashboard. The dashboard uses the dark platform design with gold numbers throughout. At the top, two large stat cards: Total Earned All Time in large gold text, and This Week's Earnings beside it. Below that, a table of all their published content with columns for title, views, purchases, conversion rate as a percentage, and total earned. Each row has a small AI indicator that lights up when the AI has a pricing suggestion ready for that piece.
+
+Below the table is a Recent Payments feed — a live list of every payment received, showing which piece was paid for, how much, and when. Watching this update in real time when payments arrive should feel satisfying and motivating.
+
+Below the payments feed are AI Pricing Suggestion cards. Each card shows the content title, the current price, the current conversion rate, the AI's suggestion — raise, lower, or keep — and one sentence of reasoning. The creator can click Apply Suggestion or Dismiss.
+
+On each of their published content pages, visible only to them, a small floating widget shows how many people have paid for this piece and total earned.
+
+In settings, the creator can connect or update their USDC wallet address. The settings page shows their connected wallet address, current balance, and a history of payouts received.
+
+---
+
+**The AI Pricing Agent**
+
+The AI agent makes real decisions with real reasoning visible to the creator at every step. It is not a black box. It explains every suggestion in plain language. At publish time it suggests a price. After 24 hours it reviews performance and tells creators when their pricing is working and when it is not. It monitors conversion rate continuously and surfaces suggestions proactively in the dashboard. If fewer than 2% of viewers are paying, it suggests lowering the price with a reason. If more than 20% of viewers are paying, it suggests raising the price with a reason. The creator always has final say. The agent advises, never overrides.
+
+This is the agentic sophistication component of the submission carrying 30% of the judging weight. The agent must demonstrably decide things — not just apply rules — and must show its reasoning every time.
+
+---
+
+**The Overall Platform Feel**
+
+Three distinct visual worlds live inside LeptonPad, each with a clear purpose.
+
+The homepage is classical editorial — warm paper, serif type, newspaper grid, ink and rule. It communicates heritage, seriousness, and respect for content. It is the public face of the platform, the thing strangers see first.
+
+The main platform — dark midnight background, gold accents, teal interactive elements, geometric sans-serif — is where work happens. It is where creators build, where readers discover, where money moves. It feels like a premium modern newsroom.
+
+The reading mode — warm cream, serif body type, generous measure, minimal chrome — is where content is consumed. It is the most important experience on the platform because it is where the reader actually receives value. It must be the best reading experience available on the internet. Better than Medium. Better than Substack. Better than any newspaper website. So good that readers associate LeptonPad with the physical pleasure of reading a well-made book.
+
+The contrast between all three environments is intentional and is part of the product's identity. A reader arrives at the classical editorial homepage, enters the dark modern platform, discovers content, pays, and is transported into the warm light of reading mode. Each transition is a designed moment, not an accident.
+
+---
+
+**Hackathon Context and Judging**
+
+This platform is a submission to the Lepton Agents Hackathon hosted by Canteen in partnership with Circle and Arc. The hackathon runs June 15 to June 29 2026. Judging criteria: 30% agentic sophistication, 30% traction — real creators earning and real readers paying during the event window, 20% Circle tool usage, 20% innovation.
+
+The platform addresses RFB 06 Creator and Publisher Monetization and incorporates RFB 01 Autonomous Paying Agents through the AI pricing agent.
+
+All technical documentation, reference implementations, and developer tools needed to build the payment layer:
+
+Hackathon brief: https://lepton.thecanteenapp.com
+
+Circle Gateway Nanopayments overview: https://developers.circle.com/gateway/nanopayments
+
+Circle Gateway buyer quickstart: https://developers.circle.com/gateway/nanopayments/quickstarts/buyer
+
+Circle Gateway seller quickstart: https://developers.circle.com/gateway/nanopayments/quickstarts/seller
+
+x402 protocol concept: https://developers.circle.com/gateway/nanopayments/concepts/x402
+
+Batched settlement concept: https://developers.circle.com/gateway/nanopayments/concepts/batched-settlement
+
+Circle Agent Stack overview: https://developers.circle.com/agent-stack
+
+Circle CLI documentation: https://developers.circle.com/agent-stack/circle-cli
+
+Circle CLI command reference: https://developers.circle.com/agent-stack/circle-cli/command-reference
+
+Agent wallets: https://developers.circle.com/agent-stack/agent-wallets
+
+Circle Wallets overview: https://developers.circle.com/wallets
+
+Circle Contracts: https://developers.circle.com/contracts
+
+USDC overview: https://developers.circle.com/stablecoins/what-is-usdc
+
+Full Circle docs index: https://developers.circle.com/llms.txt
+
+Arc chain overview: https://docs.arc.network/arc-chain
+
+Arc developer docs: https://docs.arc.network
+
+Arc App Kit overview: https://docs.arc.network/app-kit
+
+Arc App Kit installation: https://docs.arc.network/app-kit/tutorials/installation
+
+Arc App Kit Send: https://docs.arc.network/app-kit/send
+
+Arc App Kit Bridge: https://docs.arc.network/app-kit/bridge
+
+Arc App Kit Swap: https://docs.arc.network/app-kit/swap
+
+Arc App Kit Unified Balance: https://docs.arc.network/app-kit/unified-balance
+
+Arc sample applications: https://docs.arc.network/arc/references/sample-applications
+
+Arc full docs index: https://docs.arc.io/llms.txt
+
+ARC CLI repo and testnet access: https://github.com/the-canteen-dev/ARC-cli
+
+ARC CLI node docs: https://arc-node.thecanteenapp.com
+
+Circle Skills for LLM-optimized implementation:
+
+Gateway skill: https://github.com/circlefin/skills/blob/master/plugins/circle/skills/use-gateway/SKILL.md
+
+Wallets skill: https://github.com/circlefin/skills/blob/master/plugins/circle/skills/use-circle-wallets/SKILL.md
+
+User-controlled wallets skill: https://github.com/circlefin/skills/blob/master/plugins/circle/skills/use-user-controlled-wallets/SKILL.md
+
+Reference implementations to study before building:
+
+End-to-end nanopayments with LangChain paying agent and x402-protected endpoints: https://github.com/circlefin/arc-nanopayments
+
+Canteen-built companion agent: https://github.com/the-canteen-dev/circle-agent
+
+USDC commerce payments: https://github.com/circlefin/arc-commerce
+
+Multichain wallet and unified balance: https://github.com/circlefin/arc-multichain-wallet
+
+AI-powered escrow and settlement: https://github.com/circlefin/arc-escrow
+
+Gasless peer-to-peer payments: https://github.com/circlefin/arc-p2p-payments
+
+Hackathon project submission form: https://forms.gle/SMqLaw2pMGDe58LFA
+
+Hackathon registration: https://luma.com/5xcrazms
+
+Canteen Discord: https://discord.gg/rsVfYutFZg
+
+Arc builder Discord: https://discord.com/invite/buildonarc
+
+---
+
+Build this from scratch. Three visual worlds, one platform, one payment rail. Make the smallest unit of content sellable for the first time. Make the reading experience the best on the internet.
