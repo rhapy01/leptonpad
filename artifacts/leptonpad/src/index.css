@@ -1,5 +1,197 @@
 @layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
+
+/* TipTap editor styles */
+.tiptap-editor-content .ProseMirror {
+  min-height: 280px;
+  padding: 16px 18px;
+  outline: none;
+  font-family: 'Lora', 'Playfair Display', Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: #1C1917;
+}
+
+.tiptap-editor-content .ProseMirror p.is-editor-empty:first-child::before {
+  color: #78716C;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap-editor-content .ProseMirror h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1C1917;
+  margin: 1.2em 0 0.4em;
+  line-height: 1.25;
+}
+
+.tiptap-editor-content .ProseMirror h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1C1917;
+  margin: 1em 0 0.3em;
+}
+
+.tiptap-editor-content .ProseMirror blockquote {
+  border-left: 3px solid #C8960C;
+  padding-left: 16px;
+  margin: 1em 0;
+  color: #78716C;
+  font-style: italic;
+}
+
+.tiptap-editor-content .ProseMirror ul {
+  list-style: disc;
+  padding-left: 24px;
+  margin: 0.75em 0;
+}
+
+.tiptap-editor-content .ProseMirror ol {
+  list-style: decimal;
+  padding-left: 24px;
+  margin: 0.75em 0;
+}
+
+.tiptap-editor-content .ProseMirror li {
+  margin: 0.25em 0;
+}
+
+.tiptap-editor-content .ProseMirror code {
+  background: rgba(28,25,23,0.06);
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 0.875em;
+  font-family: 'Courier New', monospace;
+}
+
+.tiptap-editor-content .ProseMirror pre {
+  background: rgba(28,25,23,0.06);
+  padding: 12px 16px;
+  border-radius: 3px;
+  margin: 0.75em 0;
+  overflow-x: auto;
+}
+
+.tiptap-editor-content .ProseMirror hr {
+  border: none;
+  border-top: 1px solid rgba(28,25,23,0.15);
+  margin: 1.5em 0;
+}
+
+/* Reading mode HTML body rendering */
+.reading-body h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+  line-height: 1.25;
+}
+
+.reading-body h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 1.25em 0 0.4em;
+}
+
+.reading-body p {
+  margin: 0 0 1em;
+}
+
+.reading-body blockquote {
+  border-left: 3px solid #C8960C;
+  padding-left: 16px;
+  margin: 1.25em 0;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.reading-body ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0.75em 0;
+}
+
+.reading-body ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin: 0.75em 0;
+}
+
+.reading-body li {
+  margin: 0.3em 0;
+}
+
+.reading-body code {
+  background: rgba(28,25,23,0.06);
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 0.875em;
+  font-family: 'Courier New', monospace;
+}
+
+.reading-body hr {
+  border: none;
+  border-top: 1px solid rgba(28,25,23,0.15);
+  margin: 2em 0;
+}
+
+.reading-body strong {
+  font-weight: 700;
+}
+
+.reading-body em {
+  font-style: italic;
+}
+
+/* Slide content prose styling */
+.slide-content h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  margin: 0 0 0.6em;
+  line-height: 1.2;
+}
+
+.slide-content h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+  font-weight: 600;
+  margin: 0 0 0.5em;
+}
+
+.slide-content p {
+  margin: 0 0 0.8em;
+}
+
+.slide-content blockquote {
+  border-left: 3px solid #C8960C;
+  padding-left: 16px;
+  margin: 0.75em 0;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.slide-content ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.slide-content ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.slide-content li {
+  margin: 0.25em 0;
+}
 @import "tw-animate-css";
 @import '@clerk/themes/shadcn.css';
 @plugin "@tailwindcss/typography";

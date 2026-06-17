@@ -20,6 +20,8 @@ export interface User {
   walletAddress: string | null;
   selectedCategories: string[];
   onboardingComplete: boolean;
+  verified: boolean;
+  isAdmin: boolean;
   createdAt: string;
 }
 
@@ -58,6 +60,7 @@ export interface Content {
   creatorName: string;
   /** @nullable */
   creatorImageUrl: string | null;
+  creatorVerified: boolean;
   /** @nullable */
   previewText: string | null;
   /** @nullable */
@@ -105,6 +108,7 @@ export interface ContentDetail {
   published: boolean;
   createdAt: string;
   hasAccess: boolean;
+  creatorVerified: boolean;
 }
 
 export type ContentInputType = typeof ContentInputType[keyof typeof ContentInputType];
@@ -239,6 +243,10 @@ export interface AiSuggestion {
   conversionRate: number;
   status: AiSuggestionStatus;
   createdAt: string;
+}
+
+export interface VerifyInput {
+  verified: boolean;
 }
 
 export interface PlatformStats {

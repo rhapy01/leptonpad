@@ -30,13 +30,8 @@ async function getOrCreateUser(clerkId: string) {
   return user;
 }
 
-// GET /api/users/me
-router.get("/me", async (req, res): Promise<void> => {
-  const { userId } = getAuth(req);
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
-
-  const user = await getOrCreateUser(userId);
-  res.json({
+function serializeUser(user: typeof usersTable.$inferSelect) {
+  return {
     id: user.id,
     clerkId: user.clerkId,
     name: user.name,
@@ -45,8 +40,19 @@ router.get("/me", async (req, res): Promise<void> => {
     walletAddress: user.walletAddress,
     selectedCategories: user.selectedCategories,
     onboardingComplete: user.onboardingComplete,
+    verified: user.verified,
+    isAdmin: user.isAdmin,
     createdAt: user.createdAt.toISOString(),
-  });
+  };
+}
+
+// GET /api/users/me
+router.get("/me", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const user = await getOrCreateUser(userId);
+  res.json(serializeUser(user));
 });
 
 // PUT /api/users/me
@@ -68,17 +74,30 @@ router.put("/me", async (req, res): Promise<void> => {
     .where(eq(usersTable.clerkId, userId))
     .returning();
 
-  res.json({
-    id: updated.id,
-    clerkId: updated.clerkId,
-    name: updated.name,
-    email: updated.email,
-    imageUrl: updated.imageUrl,
-    walletAddress: updated.walletAddress,
-    selectedCategories: updated.selectedCategories,
-    onboardingComplete: updated.onboardingComplete,
-    createdAt: updated.createdAt.toISOString(),
-  });
+  res.json(serializeUser(updated));
+});
+
+// POST /api/users/:clerkId/verify — admin only
+router.post("/:clerkId/verify", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  // Check if requester is an admin
+  const requester = await getOrCreateUser(userId);
+  if (!requester.isAdmin) { res.status(403).json({ error: "Forbidden: admin only" }); return; }
+
+  const targetClerkId = req.params.clerkId;
+  const { verified } = req.body as { verified: boolean };
+
+  const existing = await db.select().from(usersTable).where(eq(usersTable.clerkId, targetClerkId)).limit(1);
+  if (!existing.length) { res.status(404).json({ error: "User not found" }); return; }
+
+  const [updated] = await db.update(usersTable)
+    .set({ verified: !!verified })
+    .where(eq(usersTable.clerkId, targetClerkId))
+    .returning();
+
+  res.json(serializeUser(updated));
 });
 
 // GET /api/users/me/purchases

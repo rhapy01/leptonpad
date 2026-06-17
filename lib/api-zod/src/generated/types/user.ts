@@ -17,5 +17,7 @@ export interface User {
   walletAddress: string | null;
   selectedCategories: string[];
   onboardingComplete: boolean;
+  verified: boolean;
+  isAdmin: boolean;
   createdAt: string;
 }

@@ -11,6 +11,8 @@ export const usersTable = pgTable("users", {
   walletAddress: text("wallet_address"),
   selectedCategories: text("selected_categories").array().notNull().default([]),
   onboardingComplete: boolean("onboarding_complete").notNull().default(false),
+  verified: boolean("verified").notNull().default(false),
+  isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

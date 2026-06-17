@@ -32,3 +32,4 @@ export * from './unlockInput';
 export * from './unlockResult';
 export * from './user';
 export * from './userUpdate';
+export * from './verifyInput';

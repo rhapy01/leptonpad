@@ -29,6 +29,8 @@ export const GetMeResponse = zod.object({
   "walletAddress": zod.string().nullable(),
   "selectedCategories": zod.array(zod.string()),
   "onboardingComplete": zod.boolean(),
+  "verified": zod.boolean(),
+  "isAdmin": zod.boolean(),
   "createdAt": zod.string()
 })
 
@@ -52,6 +54,8 @@ export const UpdateMeResponse = zod.object({
   "walletAddress": zod.string().nullable(),
   "selectedCategories": zod.array(zod.string()),
   "onboardingComplete": zod.boolean(),
+  "verified": zod.boolean(),
+  "isAdmin": zod.boolean(),
   "createdAt": zod.string()
 })
 
@@ -69,6 +73,32 @@ export const GetMyPurchasesResponseItem = zod.object({
   "paidAt": zod.string()
 })
 export const GetMyPurchasesResponse = zod.array(GetMyPurchasesResponseItem)
+
+
+/**
+ * @summary Grant or revoke verification badge (admin only)
+ */
+export const VerifyCreatorParams = zod.object({
+  "clerkId": zod.coerce.string()
+})
+
+export const VerifyCreatorBody = zod.object({
+  "verified": zod.boolean()
+})
+
+export const VerifyCreatorResponse = zod.object({
+  "id": zod.number(),
+  "clerkId": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "imageUrl": zod.string().nullable(),
+  "walletAddress": zod.string().nullable(),
+  "selectedCategories": zod.array(zod.string()),
+  "onboardingComplete": zod.boolean(),
+  "verified": zod.boolean(),
+  "isAdmin": zod.boolean(),
+  "createdAt": zod.string()
+})
 
 
 /**
@@ -109,6 +139,7 @@ export const ListContentResponse = zod.object({
   "creatorId": zod.string(),
   "creatorName": zod.string(),
   "creatorImageUrl": zod.string().nullable(),
+  "creatorVerified": zod.boolean(),
   "previewText": zod.string().nullable(),
   "audioUrl": zod.string().nullable(),
   "videoUrl": zod.string().nullable(),
@@ -170,7 +201,8 @@ export const GetContentResponse = zod.object({
   "readingTimeMinutes": zod.number().nullable(),
   "published": zod.boolean(),
   "createdAt": zod.string(),
-  "hasAccess": zod.boolean()
+  "hasAccess": zod.boolean(),
+  "creatorVerified": zod.boolean()
 })
 
 
@@ -205,6 +237,7 @@ export const UpdateContentResponse = zod.object({
   "creatorId": zod.string(),
   "creatorName": zod.string(),
   "creatorImageUrl": zod.string().nullable(),
+  "creatorVerified": zod.boolean(),
   "previewText": zod.string().nullable(),
   "audioUrl": zod.string().nullable(),
   "videoUrl": zod.string().nullable(),
@@ -220,6 +253,34 @@ export const UpdateContentResponse = zod.object({
  */
 export const DeleteContentParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get next content item in the same category
+ */
+export const GetNextContentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetNextContentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "type": zod.enum(['article', 'audio', 'video']),
+  "categorySlug": zod.string(),
+  "categoryName": zod.string(),
+  "price": zod.number(),
+  "creatorId": zod.string(),
+  "creatorName": zod.string(),
+  "creatorImageUrl": zod.string().nullable(),
+  "creatorVerified": zod.boolean(),
+  "previewText": zod.string().nullable(),
+  "audioUrl": zod.string().nullable(),
+  "videoUrl": zod.string().nullable(),
+  "viewCount": zod.number(),
+  "purchaseCount": zod.number(),
+  "published": zod.boolean(),
+  "createdAt": zod.string()
 })
 
 
@@ -369,6 +430,7 @@ export const ApplyAiSuggestionResponse = zod.object({
   "creatorId": zod.string(),
   "creatorName": zod.string(),
   "creatorImageUrl": zod.string().nullable(),
+  "creatorVerified": zod.boolean(),
   "previewText": zod.string().nullable(),
   "audioUrl": zod.string().nullable(),
   "videoUrl": zod.string().nullable(),

@@ -39,7 +39,8 @@ import type {
   UnlockInput,
   UnlockResult,
   User,
-  UserUpdate
+  UserUpdate,
+  VerifyInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -356,6 +357,78 @@ export function useGetMyPurchases<TData = Awaited<ReturnType<typeof getMyPurchas
 
 
 
+
+export const getVerifyCreatorUrl = (clerkId: string,) => {
+
+
+
+
+  return `/api/users/${clerkId}/verify`
+}
+
+/**
+ * @summary Grant or revoke verification badge (admin only)
+ */
+export const verifyCreator = async (clerkId: string,
+    verifyInput: VerifyInput, options?: RequestInit): Promise<User> => {
+
+  return customFetch<User>(getVerifyCreatorUrl(clerkId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      verifyInput,)
+  }
+);}
+
+
+
+
+export const getVerifyCreatorMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyCreator>>, TError,{clerkId: string;data: BodyType<VerifyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyCreator>>, TError,{clerkId: string;data: BodyType<VerifyInput>}, TContext> => {
+
+const mutationKey = ['verifyCreator'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyCreator>>, {clerkId: string;data: BodyType<VerifyInput>}> = (props) => {
+          const {clerkId,data} = props ?? {};
+
+          return  verifyCreator(clerkId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyCreatorMutationResult = NonNullable<Awaited<ReturnType<typeof verifyCreator>>>
+    export type VerifyCreatorMutationBody = BodyType<VerifyInput>
+    export type VerifyCreatorMutationError = ErrorType<void>
+
+    /**
+ * @summary Grant or revoke verification badge (admin only)
+ */
+export const useVerifyCreator = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyCreator>>, TError,{clerkId: string;data: BodyType<VerifyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifyCreator>>,
+        TError,
+        {clerkId: string;data: BodyType<VerifyInput>},
+        TContext
+      > => {
+      return useMutation(getVerifyCreatorMutationOptions(options));
+    }
 
 export const getListCategoriesUrl = () => {
 
@@ -807,6 +880,83 @@ export const useDeleteContent = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteContentMutationOptions(options));
     }
+
+export const getGetNextContentUrl = (id: number,) => {
+
+
+
+
+  return `/api/content/${id}/next`
+}
+
+/**
+ * @summary Get next content item in the same category
+ */
+export const getNextContent = async (id: number, options?: RequestInit): Promise<Content | void> => {
+
+  return customFetch<Content | void>(getGetNextContentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNextContentQueryKey = (id: number,) => {
+    return [
+    `/api/content/${id}/next`
+    ] as const;
+    }
+
+
+export const getGetNextContentQueryOptions = <TData = Awaited<ReturnType<typeof getNextContent>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNextContentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNextContent>>> = ({ signal }) => getNextContent(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNextContent>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNextContentQueryResult = NonNullable<Awaited<ReturnType<typeof getNextContent>>>
+export type GetNextContentQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get next content item in the same category
+ */
+
+export function useGetNextContent<TData = Awaited<ReturnType<typeof getNextContent>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNextContentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getTrackContentViewUrl = (id: number,) => {
 

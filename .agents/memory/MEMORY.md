@@ -1,2 +1,5 @@
 - [Clerk version compatibility](clerk-versions.md) — @clerk/react must be 6.x with @clerk/express; 5.x has incompatible export names
 - [Clerk clerkClient singleton](clerk-client-singleton.md) — clerkClient from @clerk/express is a pre-instantiated singleton, not a factory function
+- [Orval next-content void type](orval-void-type.md) — endpoints returning 204 produce `Content | void`; narrow with `typeof x === "object"` before use as ReactNode.
+- [TipTap with react-hook-form](tiptap-rhf.md) — use `form.setValue("body", editor.getHTML())` in onUpdate; sync reset via useEffect on value === "".
+- [Orval named ref for request bodies](orval-named-ref.md) — inline request body schemas in OpenAPI cause name collisions in codegen; always use named $ref in components/schemas.

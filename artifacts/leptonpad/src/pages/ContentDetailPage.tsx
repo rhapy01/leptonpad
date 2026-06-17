@@ -118,7 +118,19 @@ export default function ContentDetailPage({ id }: { id: number }) {
             </div>
           )}
           <div>
-            <p className="text-sm font-semibold" style={{ color: "#1C1917" }}>{content.creatorName}</p>
+            <p className="text-sm font-semibold flex items-center gap-1" style={{ color: "#1C1917" }}>
+              {content.creatorName}
+              {content.creatorVerified && (
+                <span
+                  title="Verified creator"
+                  style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    width: "14px", height: "14px", borderRadius: "50%",
+                    background: "#C8960C", color: "#fff", fontSize: "8px", fontWeight: 700,
+                  }}
+                >✓</span>
+              )}
+            </p>
             <p style={{ fontSize: "12px", color: "#78716C" }}>
               {new Date(content.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
             </p>
@@ -166,16 +178,27 @@ export default function ContentDetailPage({ id }: { id: number }) {
           <div className="py-8 text-center">
             <p style={{ fontSize: "0.875rem", color: "#78716C", marginBottom: "20px" }}>You have access to this piece.</p>
             {content.type === "article" && (
-              <Link
-                href={`/read/${id}`}
-                className="inline-block px-8 py-3 text-sm font-semibold transition-colors"
-                style={{ background: "#1C1917", color: "#FAF7F2", borderRadius: "2px" }}
-                data-testid="button-read-article"
-                onMouseOver={e => ((e.currentTarget as HTMLElement).style.background = "#3C3835")}
-                onMouseOut={e => ((e.currentTarget as HTMLElement).style.background = "#1C1917")}
-              >
-                Read Article →
-              </Link>
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <Link
+                  href={`/read/${id}`}
+                  className="inline-block px-8 py-3 text-sm font-semibold transition-colors"
+                  style={{ background: "#1C1917", color: "#FAF7F2", borderRadius: "2px" }}
+                  data-testid="button-read-article"
+                  onMouseOver={e => ((e.currentTarget as HTMLElement).style.background = "#3C3835")}
+                  onMouseOut={e => ((e.currentTarget as HTMLElement).style.background = "#1C1917")}
+                >
+                  Read Article →
+                </Link>
+                <Link
+                  href={`/slides/${id}`}
+                  className="inline-block px-6 py-3 text-sm font-semibold transition-colors"
+                  style={{ border: "1px solid rgba(28,25,23,0.18)", color: "#1C1917", borderRadius: "2px" }}
+                  onMouseOver={e => ((e.currentTarget as HTMLElement).style.background = "rgba(28,25,23,0.04)")}
+                  onMouseOut={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+                >
+                  ▦ Slide Mode
+                </Link>
+              </div>
             )}
           </div>
         ) : (

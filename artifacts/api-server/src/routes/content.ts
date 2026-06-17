@@ -19,6 +19,7 @@ async function enrichContent(rows: (typeof contentTable.$inferSelect)[], request
   const creatorIds = [...new Set(rows.map(r => r.creatorId))];
   const nameMap: Record<string, { name: string; imageUrl: string | null }> = {};
 
+  // Fetch Clerk profile info for each creator
   await Promise.all(
     creatorIds.map(async id => {
       try {
@@ -31,6 +32,14 @@ async function enrichContent(rows: (typeof contentTable.$inferSelect)[], request
     })
   );
 
+  // Fetch verified status from DB
+  const dbUsers = creatorIds.length > 0
+    ? await db.select({ clerkId: usersTable.clerkId, verified: usersTable.verified })
+        .from(usersTable)
+        .where(inArray(usersTable.clerkId, creatorIds))
+    : [];
+  const verifiedMap: Record<string, boolean> = Object.fromEntries(dbUsers.map(u => [u.clerkId, u.verified]));
+
   return rows.map(r => ({
     id: r.id,
     title: r.title,
@@ -41,6 +50,7 @@ async function enrichContent(rows: (typeof contentTable.$inferSelect)[], request
     creatorId: r.creatorId,
     creatorName: nameMap[r.creatorId]?.name ?? "Creator",
     creatorImageUrl: nameMap[r.creatorId]?.imageUrl ?? null,
+    creatorVerified: verifiedMap[r.creatorId] ?? false,
     previewText: r.previewText,
     audioUrl: r.audioUrl,
     videoUrl: r.videoUrl,
@@ -206,6 +216,52 @@ router.delete("/:id", async (req, res): Promise<void> => {
 
   await db.delete(contentTable).where(eq(contentTable.id, id));
   res.status(204).send();
+});
+
+// GET /api/content/:id/next — next published item in same category
+router.get("/:id/next", async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const items = await db.select().from(contentTable).where(eq(contentTable.id, id)).limit(1);
+  if (!items.length) { res.status(404).json({ error: "Not found" }); return; }
+
+  const current = items[0];
+
+  const [next] = await db.select().from(contentTable)
+    .where(and(
+      eq(contentTable.categorySlug, current.categorySlug),
+      eq(contentTable.published, true),
+      sql`${contentTable.id} != ${id}`,
+      sql`${contentTable.created_at} <= ${current.createdAt}`,
+    ))
+    .orderBy(sql`${contentTable.created_at} desc`)
+    .limit(1);
+
+  if (!next) {
+    // Try any other published item in the category
+    const [fallback] = await db.select().from(contentTable)
+      .where(and(
+        eq(contentTable.categorySlug, current.categorySlug),
+        eq(contentTable.published, true),
+        sql`${contentTable.id} != ${id}`,
+      ))
+      .orderBy(sql`${contentTable.created_at} desc`)
+      .limit(1);
+
+    if (!fallback) { res.status(204).send(); return; }
+    const [enriched] = await enrichContent([fallback]);
+    const cats = await db.select().from(categoriesTable);
+    const catMap = Object.fromEntries(cats.map(c => [c.slug, c.name]));
+    res.json({ ...enriched, categoryName: catMap[enriched.categorySlug] ?? enriched.categorySlug });
+    return;
+  }
+
+  const [enriched] = await enrichContent([next]);
+  const cats = await db.select().from(categoriesTable);
+  const catMap = Object.fromEntries(cats.map(c => [c.slug, c.name]));
+  res.json({ ...enriched, categoryName: catMap[enriched.categorySlug] ?? enriched.categorySlug });
 });
 
 // POST /api/content/:id/view

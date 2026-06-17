@@ -33,4 +33,5 @@ export interface ContentDetail {
   published: boolean;
   createdAt: string;
   hasAccess: boolean;
+  creatorVerified: boolean;
 }

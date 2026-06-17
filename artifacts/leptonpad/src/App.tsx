@@ -11,6 +11,7 @@ import HomePage from "@/pages/HomePage";
 import FeedPage from "@/pages/FeedPage";
 import ContentDetailPage from "@/pages/ContentDetailPage";
 import ReadingModePage from "@/pages/ReadingModePage";
+import SlideReaderPage from "@/pages/SlideReaderPage";
 import CreatePage from "@/pages/CreatePage";
 import EarningsPage from "@/pages/EarningsPage";
 import OnboardingPage from "@/pages/OnboardingPage";
@@ -173,22 +174,21 @@ function Router() {
         </Show>
       </Route>
       <Route path="/feed">
-        <ProtectedRoute>
-          <FeedPage />
-        </ProtectedRoute>
+        <FeedPage />
       </Route>
       <Route path="/content/:id">
         {(params) => (
-          <ProtectedRoute>
-            <ContentDetailPage id={parseInt(params.id, 10)} />
-          </ProtectedRoute>
+          <ContentDetailPage id={parseInt(params.id, 10)} />
         )}
       </Route>
       <Route path="/read/:id">
         {(params) => (
-          <ProtectedRoute>
-            <ReadingModePage id={parseInt(params.id, 10)} />
-          </ProtectedRoute>
+          <ReadingModePage id={parseInt(params.id, 10)} />
+        )}
+      </Route>
+      <Route path="/slides/:id">
+        {(params) => (
+          <SlideReaderPage id={parseInt(params.id, 10)} />
         )}
       </Route>
       <Route path="/create">

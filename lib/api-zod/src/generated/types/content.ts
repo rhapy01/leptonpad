@@ -18,6 +18,7 @@ export interface Content {
   creatorName: string;
   /** @nullable */
   creatorImageUrl: string | null;
+  creatorVerified: boolean;
   /** @nullable */
   previewText: string | null;
   /** @nullable */
