@@ -273,6 +273,31 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Editorial platform utilities */
+.editorial-label {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Live activity ticker */
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: tickerScroll 40s linear infinite;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
 /* Clerk override for dark platform */
 .cl-formFieldInput::placeholder {
   color: #6B7280;

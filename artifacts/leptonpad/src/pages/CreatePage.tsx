@@ -56,7 +56,7 @@ export default function CreatePage() {
     setAiSuggestion(null);
     try {
       // Use contentId 0 as a signal to generate a new suggestion at publish time
-      const result = await requestAiSuggestion.mutateAsync({ params: { contentId: 0 } });
+      const result = await requestAiSuggestion.mutateAsync({ contentId: 0 });
       setAiSuggestion({ suggestedPrice: result.suggestedPrice, action: result.action, reasoning: result.reasoning });
     } catch {
       // fallback suggestion

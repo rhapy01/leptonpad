@@ -1,72 +1,136 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useListContent, useListCategories, useGetMe } from "@workspace/api-client-react";
+import type { Content } from "@workspace/api-client-react";
 import { PlatformLayout } from "@/components/PlatformLayout";
 
-function ContentCard({ item }: { item: NonNullable<ReturnType<typeof useListContent>["data"]>["items"][number] }) {
+const TYPE_LABELS: Record<string, string> = {
+  article: "Article",
+  audio: "Audio",
+  video: "Video",
+};
+
+const TYPE_MARKS: Record<string, string> = {
+  article: "✍",
+  audio: "♪",
+  video: "▶",
+};
+
+function ContentCard({
+  item,
+  featured = false,
+}: {
+  item: Content;
+  featured?: boolean;
+}) {
   const isFree = Number(item.price) === 0;
-  const typeColors: Record<string, string> = {
-    article: "#2DD4BF",
-    audio: "#818CF8",
-    video: "#FB923C",
-  };
 
   return (
     <Link href={`/content/${item.id}`} data-testid={`card-content-${item.id}`}>
-      <div
-        className="content-card rounded-xl p-5 cursor-pointer border border-transparent hover:border-white/10"
-        style={{ background: "#161820" }}
+      <article
+        className="group editorial-card h-full flex flex-col"
+        style={{
+          background: "#FFFFFF",
+          border: "1px solid rgba(28,25,23,0.12)",
+          borderRadius: "2px",
+          padding: featured ? "24px" : "18px 20px",
+          cursor: "pointer",
+          transition: "box-shadow 0.2s ease, border-color 0.2s ease",
+        }}
+        onMouseOver={e => {
+          (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(28,25,23,0.08)";
+          (e.currentTarget as HTMLElement).style.borderColor = "rgba(28,25,23,0.3)";
+        }}
+        onMouseOut={e => {
+          (e.currentTarget as HTMLElement).style.boxShadow = "none";
+          (e.currentTarget as HTMLElement).style.borderColor = "rgba(28,25,23,0.12)";
+        }}
       >
-        {/* Creator */}
+        {/* Section label */}
         <div className="flex items-center gap-2 mb-3">
-          {item.creatorImageUrl ? (
-            <img src={item.creatorImageUrl} alt={item.creatorName} className="w-6 h-6 rounded-full object-cover" />
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-              <span className="text-xs text-[#6B7280]">{item.creatorName[0]?.toUpperCase()}</span>
-            </div>
-          )}
-          <span className="text-xs text-[#6B7280]">{item.creatorName}</span>
+          <span className="editorial-label" style={{ color: "#78716C" }}>
+            {TYPE_MARKS[item.type]} {TYPE_LABELS[item.type] ?? item.type}
+          </span>
+          <span style={{ color: "rgba(28,25,23,0.2)", fontSize: "10px" }}>·</span>
+          <span className="editorial-label" style={{ color: "#78716C" }}>{item.categoryName}</span>
         </div>
 
+        {/* Rule */}
+        <div style={{ borderTop: "1px solid rgba(28,25,23,0.15)", marginBottom: "12px" }} />
+
         {/* Title */}
-        <h3 className="text-[#E8EAF0] font-semibold text-base leading-snug mb-3 line-clamp-2">
+        <h3
+          className="leading-snug mb-3 flex-1"
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: featured ? "1.25rem" : "1rem",
+            fontWeight: 700,
+            color: "#1C1917",
+            lineHeight: featured ? "1.4" : "1.45",
+          }}
+        >
           {item.title}
         </h3>
 
-        {/* Preview */}
+        {/* Preview text */}
         {item.previewText && (
-          <p className="text-sm text-[#6B7280] leading-relaxed mb-4 line-clamp-2">{item.previewText}</p>
+          <p
+            className="mb-4 line-clamp-2"
+            style={{
+              fontSize: "0.8125rem",
+              color: "#78716C",
+              lineHeight: "1.6",
+              fontFamily: "Inter, system-ui, sans-serif",
+            }}
+          >
+            {item.previewText}
+          </p>
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between mt-auto">
+        <div className="flex items-center justify-between mt-auto pt-3" style={{ borderTop: "1px solid rgba(28,25,23,0.08)" }}>
           <div className="flex items-center gap-2">
-            <span
-              className="text-xs font-medium px-2 py-0.5 rounded"
-              style={{
-                color: typeColors[item.type] ?? "#2DD4BF",
-                background: `${typeColors[item.type] ?? "#2DD4BF"}15`,
-              }}
-            >
-              {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+            {item.creatorImageUrl ? (
+              <img src={item.creatorImageUrl} alt={item.creatorName} className="w-5 h-5 rounded-full object-cover" />
+            ) : (
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(28,25,23,0.08)" }}
+              >
+                <span style={{ fontSize: "9px", color: "#78716C" }}>{item.creatorName[0]?.toUpperCase()}</span>
+              </div>
+            )}
+            <span style={{ fontSize: "11px", color: "#78716C" }}>{item.creatorName}</span>
+            <span style={{ fontSize: "11px", color: "rgba(28,25,23,0.3)" }}>·</span>
+            <span style={{ fontSize: "11px", color: "#78716C" }}>
+              {new Date(item.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </span>
-            <span className="text-xs text-[#6B7280]/70">{item.categoryName}</span>
           </div>
           {isFree ? (
-            <span className="text-xs font-medium text-green-400 bg-green-400/10 px-2 py-0.5 rounded">Free</span>
+            <span
+              className="text-xs font-medium px-2 py-0.5"
+              style={{
+                background: "rgba(28,25,23,0.06)",
+                color: "#78716C",
+                borderRadius: "2px",
+                fontSize: "10px",
+                letterSpacing: "0.04em",
+              }}
+            >
+              FREE
+            </span>
           ) : (
-            <span className="text-sm font-semibold text-gold" style={{ color: "#F5C842" }} data-testid={`text-price-${item.id}`}>
-              ${Number(item.price).toFixed(item.price < 0.01 ? 6 : 2)} USDC
+            <span
+              className="font-bold"
+              style={{ color: "#C8960C", fontSize: "13px", fontFamily: "'Playfair Display', Georgia, serif" }}
+              data-testid={`text-price-${item.id}`}
+            >
+              ${Number(item.price).toFixed(Number(item.price) < 0.01 ? 6 : 2)}
+              <span style={{ fontSize: "10px", fontWeight: 400, fontFamily: "Inter, sans-serif", color: "#A07810", marginLeft: "2px" }}>USDC</span>
             </span>
           )}
         </div>
-
-        {/* Timestamp */}
-        <p className="text-xs text-[#6B7280]/60 mt-2">
-          {new Date(item.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-        </p>
-      </div>
+      </article>
     </Link>
   );
 }
@@ -93,38 +157,70 @@ export default function FeedPage() {
     { value: "video", label: "Video" },
   ];
 
+  const items = feed?.items ?? [];
+  const featuredItems = items.slice(0, 2);
+  const restItems = items.slice(2);
+
   return (
     <PlatformLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+
+        {/* Page header */}
+        <div
+          className="py-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
+          style={{ borderBottom: "1px solid rgba(28,25,23,0.15)" }}
+        >
           <div>
-            <h1 className="text-xl font-semibold text-[#E8EAF0]">Your Feed</h1>
-            <p className="text-sm text-[#6B7280] mt-0.5">
-              {feed?.total ?? 0} pieces across your categories
+            <p className="editorial-label mb-1" style={{ color: "#78716C" }}>Your reading list</p>
+            <h1
+              style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: "clamp(1.5rem, 4vw, 2rem)",
+                fontWeight: 700,
+                color: "#1C1917",
+                lineHeight: 1.2,
+              }}
+            >
+              The Feed
+            </h1>
+            <p style={{ fontSize: "0.8125rem", color: "#78716C", marginTop: "4px" }}>
+              {feed?.total ?? 0} pieces available
             </p>
           </div>
           <Link
             href="/create"
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#F5C842] text-[#0D0F14] hover:bg-[#F5C842]/90 transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold transition-colors shrink-0 self-start sm:self-auto"
+            style={{
+              background: "#1C1917",
+              color: "#FAF7F2",
+              borderRadius: "2px",
+            }}
             data-testid="button-create-content"
+            onMouseOver={e => ((e.currentTarget as HTMLElement).style.background = "#3C3835")}
+            onMouseOut={e => ((e.currentTarget as HTMLElement).style.background = "#1C1917")}
           >
-            + Create
+            ✍ Publish something
           </Link>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-4 mb-8">
+        {/* Filter bar */}
+        <div
+          className="py-3 flex flex-wrap gap-x-6 gap-y-2 items-center"
+          style={{ borderBottom: "1px solid rgba(28,25,23,0.1)" }}
+        >
+          {/* Type filter */}
           <div className="flex gap-1">
             {types.map(t => (
               <button
                 key={t.value}
                 onClick={() => setTypeFilter(t.value)}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                  typeFilter === t.value
-                    ? "bg-[#2DD4BF]/20 text-[#2DD4BF]"
-                    : "text-[#6B7280] hover:text-[#E8EAF0]"
-                }`}
+                className="px-3 py-1 text-xs transition-colors"
+                style={{
+                  color: typeFilter === t.value ? "#1C1917" : "#78716C",
+                  fontWeight: typeFilter === t.value ? 600 : 400,
+                  background: typeFilter === t.value ? "rgba(28,25,23,0.08)" : "transparent",
+                  borderRadius: "2px",
+                }}
                 data-testid={`filter-type-${t.value || "all"}`}
               >
                 {t.label}
@@ -132,22 +228,33 @@ export default function FeedPage() {
             ))}
           </div>
 
+          <div style={{ width: "1px", background: "rgba(28,25,23,0.15)", height: "16px", alignSelf: "center" }} className="hidden sm:block" />
+
+          {/* Category filter */}
           <div className="flex flex-wrap gap-1">
             <button
               onClick={() => setCategoryFilter("")}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                !categoryFilter ? "bg-white/10 text-[#E8EAF0]" : "text-[#6B7280] hover:text-[#E8EAF0]"
-              }`}
+              className="px-3 py-1 text-xs transition-colors"
+              style={{
+                color: !categoryFilter ? "#1C1917" : "#78716C",
+                fontWeight: !categoryFilter ? 600 : 400,
+                background: !categoryFilter ? "rgba(28,25,23,0.08)" : "transparent",
+                borderRadius: "2px",
+              }}
             >
-              My Categories
+              My Picks
             </button>
             {categories?.map(cat => (
               <button
                 key={cat.slug}
                 onClick={() => setCategoryFilter(cat.slug === categoryFilter ? "" : cat.slug)}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                  categoryFilter === cat.slug ? "bg-[#2DD4BF]/20 text-[#2DD4BF]" : "text-[#6B7280] hover:text-[#E8EAF0]"
-                }`}
+                className="px-3 py-1 text-xs transition-colors"
+                style={{
+                  color: categoryFilter === cat.slug ? "#1C1917" : "#78716C",
+                  fontWeight: categoryFilter === cat.slug ? 600 : 400,
+                  background: categoryFilter === cat.slug ? "rgba(28,25,23,0.08)" : "transparent",
+                  borderRadius: "2px",
+                }}
                 data-testid={`filter-category-${cat.slug}`}
               >
                 {cat.name}
@@ -156,37 +263,62 @@ export default function FeedPage() {
           </div>
         </div>
 
-        {/* Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="rounded-xl p-5 animate-pulse" style={{ background: "#161820" }}>
-                <div className="h-3 bg-white/8 rounded w-1/2 mb-3" />
-                <div className="h-4 bg-white/8 rounded w-full mb-2" />
-                <div className="h-4 bg-white/8 rounded w-3/4" />
-              </div>
-            ))}
-          </div>
-        ) : (feed?.items?.length ?? 0) === 0 ? (
-          <div className="text-center py-24">
-            <p className="text-[#6B7280] text-lg mb-2">No content yet</p>
-            <p className="text-sm text-[#6B7280]/60">Be the first to publish something.</p>
-            <Link href="/create" className="inline-block mt-6 px-6 py-2.5 bg-[#F5C842] text-[#0D0F14] text-sm font-semibold rounded-lg">
-              Start Publishing
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {feed?.items.map((item, i) => (
-              <div
-                key={item.id}
-                style={{ animation: `cardEntrance 0.4s ease ${i * 40}ms both` }}
-              >
-                <ContentCard item={item} />
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Content */}
+        <div className="py-8">
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="animate-pulse" style={{ background: "#FFFFFF", border: "1px solid rgba(28,25,23,0.1)", borderRadius: "2px", padding: "20px", height: "200px" }}>
+                  <div className="h-2.5 rounded w-1/3 mb-3" style={{ background: "rgba(28,25,23,0.08)" }} />
+                  <div style={{ borderTop: "1px solid rgba(28,25,23,0.1)", marginBottom: "12px" }} />
+                  <div className="h-5 rounded w-full mb-2" style={{ background: "rgba(28,25,23,0.08)" }} />
+                  <div className="h-4 rounded w-4/5" style={{ background: "rgba(28,25,23,0.06)" }} />
+                </div>
+              ))}
+            </div>
+          ) : items.length === 0 ? (
+            <div className="py-24 text-center">
+              <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "1.25rem", color: "#1C1917", marginBottom: "8px" }}>Nothing here yet.</p>
+              <p style={{ fontSize: "0.875rem", color: "#78716C" }}>Publish the first piece and earn in USDC.</p>
+              <Link href="/create" className="inline-block mt-6 px-6 py-2.5 text-sm font-semibold" style={{ background: "#1C1917", color: "#FAF7F2", borderRadius: "2px" }}>
+                Start Publishing
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Featured row — first 2 items larger */}
+              {featuredItems.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {featuredItems.map((item, i) => (
+                    <div key={item.id} style={{ animation: `cardEntrance 0.4s ease ${i * 60}ms both` }}>
+                      <ContentCard item={item} featured />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Rule */}
+              {restItems.length > 0 && featuredItems.length > 0 && (
+                <div className="flex items-center gap-4">
+                  <div style={{ flex: 1, borderTop: "1px solid rgba(28,25,23,0.12)" }} />
+                  <span className="editorial-label" style={{ color: "#78716C" }}>More pieces</span>
+                  <div style={{ flex: 1, borderTop: "1px solid rgba(28,25,23,0.12)" }} />
+                </div>
+              )}
+
+              {/* Rest of content */}
+              {restItems.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {restItems.map((item, i) => (
+                    <div key={item.id} style={{ animation: `cardEntrance 0.4s ease ${(i + 2) * 50}ms both` }}>
+                      <ContentCard item={item} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </PlatformLayout>
   );

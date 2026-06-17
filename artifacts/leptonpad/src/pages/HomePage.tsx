@@ -26,7 +26,7 @@ function useCountUp(target: number, duration = 1200) {
 }
 
 export default function HomePage() {
-  const { data: stats, isLoading } = useGetPlatformStats({ query: { refetchInterval: 30_000 } });
+  const { data: stats, isLoading } = useGetPlatformStats({ query: { queryKey: ["platformStats"], refetchInterval: 30_000 } });
   const usdcPaid = useCountUp(Number(stats?.totalUsdcPaid ?? 0));
 
   return (
