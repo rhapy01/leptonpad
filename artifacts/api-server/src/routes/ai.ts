@@ -3,8 +3,10 @@ import { getAuth } from "@clerk/express";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { db, contentTable, paymentsTable, aiSuggestionsTable } from "@workspace/db";
 import { suggestTitles, optimizeSeo, improveWriting, suggestTags, isLlmConfigured } from "../lib/llm";
+import { aiRateLimit } from "../middlewares/rateLimit";
 
 const router = Router();
+router.use(aiRateLimit);
 
 type AiAction = "raise" | "lower" | "keep";
 

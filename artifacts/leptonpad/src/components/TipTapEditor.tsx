@@ -83,7 +83,11 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
         placeholder: placeholder ?? "Write your article here… Paste from Word, Google Docs, or any source.",
         emptyEditorClass: "is-editor-empty",
       }),
-      Link.configure({ openOnClick: false }),
+      Link.configure({
+        openOnClick: false,
+        protocols: ["http", "https", "mailto"],
+        validate: (href) => !/^javascript:/i.test(href),
+      }),
     ],
     content: value || "",
     onUpdate({ editor }) {

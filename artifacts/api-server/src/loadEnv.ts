@@ -71,6 +71,24 @@ if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = "development";
 }
 
+const isProd = process.env.NODE_ENV === "production";
+
+if (isProd && process.env.MOCK_PAYMENTS === "true") {
+  throw new Error("MOCK_PAYMENTS cannot be enabled in production");
+}
+
+if (isProd) {
+  const walletSecret = process.env.WALLET_ENCRYPTION_SECRET?.trim();
+  if (process.env.WALLET_MODE?.trim().toLowerCase() === "custodial") {
+    if (!walletSecret || walletSecret.length < 32) {
+      throw new Error("WALLET_ENCRYPTION_SECRET must be at least 32 characters when WALLET_MODE=custodial");
+    }
+  }
+  if (!process.env.INITIAL_ADMIN_EMAILS?.trim()) {
+    console.warn("[security] INITIAL_ADMIN_EMAILS is unset — no auto-admin promotion in production");
+  }
+}
+
 if (process.env.MOCK_PAYMENTS !== "true" && !process.env.LEPTON_SPLIT_CONTRACT && !process.env.GATEWAY_SELLER_ADDRESS) {
   console.warn(
     "[settlement] LEPTON_SPLIT_CONTRACT / GATEWAY_SELLER_ADDRESS not set. " +

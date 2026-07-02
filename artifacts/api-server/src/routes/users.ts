@@ -5,11 +5,12 @@ import { db, usersTable, contentTable, paymentsTable, categoriesTable } from "@w
 import {
   UpdateMeBody,
 } from "@workspace/api-zod";
-import { provisionUserWallet } from "../lib/appWallet";
+import { provisionUserWallet, reconcileWalletAddress } from "../lib/appWallet";
+import { validateOptionalUrl } from "../lib/validateUrl";
 
 const router = Router();
 
-const INITIAL_ADMIN_EMAILS = (process.env.INITIAL_ADMIN_EMAILS ?? "akintoyeisaac5@gmail.com")
+const INITIAL_ADMIN_EMAILS = (process.env.INITIAL_ADMIN_EMAILS ?? "")
   .split(",")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
@@ -148,7 +149,7 @@ router.get("/me", async (req, res): Promise<void> => {
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   try {
-    const user = await getOrCreateUser(userId);
+    const user = await reconcileWalletAddress(await getOrCreateUser(userId));
     res.json(serializeUser(user));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to load user";
@@ -164,21 +165,37 @@ router.put("/me", async (req, res): Promise<void> => {
   const parsed = UpdateMeBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
+  if ((req.body as { walletAddress?: string }).walletAddress !== undefined) {
+    res.status(403).json({ error: "walletAddress cannot be changed — use your provisioned in-app wallet" });
+    return;
+  }
+
   await getOrCreateUser(userId);
 
   const before = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
   const wasOnboarded = before[0]?.onboardingComplete ?? false;
 
+  let website: string | null | undefined;
+  let twitterUrl: string | null | undefined;
+  let linkedinUrl: string | null | undefined;
+  try {
+    website = validateOptionalUrl((parsed.data as { website?: string }).website, "website");
+    twitterUrl = validateOptionalUrl((parsed.data as { twitterUrl?: string }).twitterUrl, "twitter");
+    linkedinUrl = validateOptionalUrl((parsed.data as { linkedinUrl?: string }).linkedinUrl, "linkedin");
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Invalid URL" });
+    return;
+  }
+
   const [updated] = await db.update(usersTable)
     .set({
-      ...(parsed.data.walletAddress !== undefined ? { walletAddress: parsed.data.walletAddress } : {}),
       ...(parsed.data.selectedCategories !== undefined ? { selectedCategories: parsed.data.selectedCategories } : {}),
       ...(parsed.data.onboardingComplete !== undefined ? { onboardingComplete: parsed.data.onboardingComplete } : {}),
       ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
       ...((parsed.data as { bio?: string }).bio !== undefined ? { bio: (parsed.data as { bio?: string }).bio } : {}),
-      ...((parsed.data as { website?: string }).website !== undefined ? { website: (parsed.data as { website?: string }).website } : {}),
-      ...((parsed.data as { twitterUrl?: string }).twitterUrl !== undefined ? { twitterUrl: (parsed.data as { twitterUrl?: string }).twitterUrl } : {}),
-      ...((parsed.data as { linkedinUrl?: string }).linkedinUrl !== undefined ? { linkedinUrl: (parsed.data as { linkedinUrl?: string }).linkedinUrl } : {}),
+      ...(website !== undefined ? { website } : {}),
+      ...(twitterUrl !== undefined ? { twitterUrl } : {}),
+      ...(linkedinUrl !== undefined ? { linkedinUrl } : {}),
       ...((parsed.data as { imageUrl?: string }).imageUrl !== undefined ? { imageUrl: (parsed.data as { imageUrl?: string }).imageUrl } : {}),
       ...((parsed.data as { bannerUrl?: string }).bannerUrl !== undefined ? { bannerUrl: (parsed.data as { bannerUrl?: string }).bannerUrl } : {}),
       ...((parsed.data as { country?: string }).country !== undefined ? { country: (parsed.data as { country?: string }).country } : {}),

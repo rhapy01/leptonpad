@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { eq, sql, desc } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
-import { db, usersTable, contentTable, paymentsTable } from "@workspace/db";
+import { db, usersTable, contentTable, paymentsTable, contentReportsTable } from "@workspace/db";
 import { getOrCreateUser } from "./users";
 import { sendCreatorVerifiedEmail, sendNewsletterEmail, isEmailConfigured, htmlToPlainText } from "../lib/email";
+import { sanitizeNewsletterHtml, assertMaxLength, MAX_NEWSLETTER_BODY_LENGTH } from "../lib/sanitizeHtml";
+import { adminRateLimit } from "../middlewares/rateLimit";
 import { randomUUID } from "node:crypto";
 
 const router = Router();
+router.use(adminRateLimit);
 
 async function requireAdmin(req: Parameters<typeof getAuth>[0]) {
   const { userId } = getAuth(req);
@@ -80,6 +83,29 @@ router.get("/users", async (req, res): Promise<void> => {
       createdAt: u.createdAt.toISOString(),
     })),
   );
+});
+
+// GET /api/admin/reports — review user-submitted content reports
+router.get("/reports", async (req, res): Promise<void> => {
+  if (!(await requireAdmin(req))) {
+    res.status(403).json({ error: "Forbidden: admin only" });
+    return;
+  }
+
+  const reports = await db
+    .select()
+    .from(contentReportsTable)
+    .orderBy(desc(contentReportsTable.createdAt))
+    .limit(100);
+
+  res.json(reports.map(r => ({
+    id: r.id,
+    contentId: r.contentId,
+    reporterId: r.reporterId,
+    reason: r.reason,
+    status: r.status,
+    createdAt: r.createdAt.toISOString(),
+  })));
 });
 
 // PATCH /api/admin/users/:clerkId/verified — assign or revoke verification badge
@@ -204,6 +230,15 @@ router.post("/newsletter", async (req, res): Promise<void> => {
     return;
   }
 
+  let bodyHtml: string;
+  try {
+    assertMaxLength(body.trim(), MAX_NEWSLETTER_BODY_LENGTH, "body");
+    bodyHtml = sanitizeNewsletterHtml(body.trim());
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Invalid newsletter body" });
+    return;
+  }
+
   const recipients = await db
     .select({ email: usersTable.email, name: usersTable.name })
     .from(usersTable)
@@ -216,7 +251,6 @@ router.post("/newsletter", async (req, res): Promise<void> => {
       preview: true,
       recipientCount: withEmail.length,
       subject: subject.trim(),
-      sampleRecipient: withEmail[0]?.email ?? null,
     });
     return;
   }
@@ -228,7 +262,6 @@ router.post("/newsletter", async (req, res): Promise<void> => {
 
   const batchId = randomUUID();
   const subjectTrimmed = subject.trim();
-  const bodyHtml = body.trim();
   const bodyText = htmlToPlainText(bodyHtml);
 
   for (const user of withEmail) {

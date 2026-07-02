@@ -14,7 +14,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { db, usersTable, contentTable } from "@workspace/db";
 import { leptonSplitAbi } from "../contracts/leptonSplitAbi";
 import { arcTestnet } from "./arcChain";
-import { provisionUserWallet } from "./appWallet";
+import { provisionUserWallet, deriveWalletAddress } from "./appWallet";
 import { isMockPayments } from "./gateway";
 import { logger } from "./logger";
 import { SettlementIncompleteError, CreatorWalletRequiredError, type CreatorVerifyOnChainSync } from "./settlementErrors";
@@ -186,13 +186,14 @@ export async function resolveCreatorWalletStrict(creatorId: string): Promise<Add
   }
 
   const user = await provisionUserWallet(creatorId);
-  if (!user.walletAddress) {
+  const payoutAddress = deriveWalletAddress(user);
+  if (!payoutAddress) {
     throw new CreatorWalletRequiredError(
       "Your LeptonPad creator wallet could not be provisioned. Try again from Settings.",
     );
   }
 
-  return user.walletAddress as Address;
+  return payoutAddress;
 }
 
 export async function resolveCreatorWallet(

@@ -14,6 +14,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { db, usersTable } from "@workspace/db";
 import { arcTestnet } from "./arcChain";
 import { getPaymentConfig, isMockPayments } from "./gateway";
+import { isClientWalletMode, userUsesCustodialWallet } from "./walletMode";
 
 const ENCRYPTION_VERSION = "v1";
 const GATEWAY_MIN_BALANCE = 1;
@@ -44,6 +45,9 @@ function encryptionKey(): Buffer {
   const secret = process.env.WALLET_ENCRYPTION_SECRET;
   if (!secret) {
     if (isMockPayments()) {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("MOCK_PAYMENTS cannot be enabled in production");
+      }
       return createHash("sha256").update("leptonpad-dev-wallet-secret").digest();
     }
     throw new Error("WALLET_ENCRYPTION_SECRET is required when MOCK_PAYMENTS=false");
@@ -60,6 +64,37 @@ export function encryptPrivateKey(privateKey: Hex): string {
   const encrypted = Buffer.concat([cipher.update(privateKey, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return `${ENCRYPTION_VERSION}:${iv.toString("base64")}:${tag.toString("base64")}:${encrypted.toString("base64")}`;
+}
+
+/** Authoritative payout address — always derived from the encrypted key, never user-editable. */
+export function deriveWalletAddress(user: {
+  walletEncryptedKey: string | null;
+  walletAddress?: string | null;
+}): Address | null {
+  if (!user.walletEncryptedKey) return null;
+  try {
+    const privateKey = decryptPrivateKey(user.walletEncryptedKey);
+    return privateKeyToAccount(privateKey).address;
+  } catch {
+    return null;
+  }
+}
+
+/** Fix DB if walletAddress was tampered with — payouts always use the derived key address. */
+export async function reconcileWalletAddress(
+  user: typeof usersTable.$inferSelect,
+): Promise<typeof usersTable.$inferSelect> {
+  if (!user.walletEncryptedKey) return user;
+  const derived = deriveWalletAddress(user);
+  if (user.walletAddress?.toLowerCase() === derived.toLowerCase()) return user;
+
+  const [fixed] = await db
+    .update(usersTable)
+    .set({ walletAddress: derived })
+    .where(eq(usersTable.clerkId, user.clerkId))
+    .returning();
+
+  return fixed ?? user;
 }
 
 export function decryptPrivateKey(payload: string): Hex {
@@ -107,8 +142,14 @@ export async function provisionUserWallet(clerkId: string): Promise<typeof users
   }
 
   const user = existing[0];
-  if (user.walletAddress && user.walletEncryptedKey) {
+
+  if (isClientWalletMode()) {
+    if (user.walletAddress) return reconcileWalletAddress(user);
     return user;
+  }
+
+  if (user.walletAddress && user.walletEncryptedKey) {
+    return reconcileWalletAddress(user);
   }
 
   const privateKey = generatePrivateKey();
@@ -261,12 +302,15 @@ export async function activateGatewayWallet(clerkId: string): Promise<{
 }
 
 export async function getAppWalletStatus(clerkId: string) {
-  const user = await provisionUserWallet(clerkId);
+  const user = await reconcileWalletAddress(await provisionUserWallet(clerkId));
+  const address = deriveWalletAddress(user) ?? user.walletAddress;
   const config = getPaymentConfig();
+  const custodial = userUsesCustodialWallet(user);
 
   if (config.mockMode) {
     return {
-      address: user.walletAddress,
+      address,
+      clientSide: isClientWalletMode() && !custodial,
       gatewayReady: true,
       gatewayAvailable: null as string | null,
       walletBalance: null as string | null,
@@ -274,9 +318,21 @@ export async function getAppWalletStatus(clerkId: string) {
     };
   }
 
-  if (!user.walletEncryptedKey) {
+  if (isClientWalletMode() && !custodial) {
     return {
       address: user.walletAddress,
+      clientSide: true,
+      gatewayReady: user.walletGatewayReady,
+      gatewayAvailable: null,
+      walletBalance: null,
+      onChainBalance: null,
+      mockMode: false,
+    };
+  }
+
+  if (!user.walletEncryptedKey) {
+    return {
+      address,
       gatewayReady: false,
       gatewayAvailable: null,
       walletBalance: null,
@@ -293,12 +349,12 @@ export async function getAppWalletStatus(clerkId: string) {
     const balances = await client.getBalances();
     const gatewayAvail = Number.parseFloat(balances.gateway.formattedAvailable);
     const ready = user.walletGatewayReady || gatewayAvail >= GATEWAY_MIN_BALANCE;
-    const onChainBalance = user.walletAddress
-      ? (await getOnChainUsdcBalance(user.walletAddress as Address)).toFixed(6)
+    const onChainBalance = address
+      ? (await getOnChainUsdcBalance(address as Address)).toFixed(6)
       : null;
 
     return {
-      address: user.walletAddress,
+      address,
       gatewayReady: ready,
       gatewayAvailable: balances.gateway.formattedAvailable,
       walletBalance: onChainBalance ?? balances.wallet.formatted,
@@ -307,7 +363,7 @@ export async function getAppWalletStatus(clerkId: string) {
     };
   } catch {
     return {
-      address: user.walletAddress,
+      address,
       gatewayReady: user.walletGatewayReady,
       gatewayAvailable: null,
       walletBalance: null,
@@ -316,8 +372,68 @@ export async function getAppWalletStatus(clerkId: string) {
   }
 }
 
+export async function exportLegacyWalletKey(clerkId: string): Promise<{ privateKey: Hex; address: Address } | null> {
+  if (!isClientWalletMode()) return null;
+
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.clerkId, clerkId))
+    .limit(1);
+
+  if (!user?.walletEncryptedKey) return null;
+
+  const privateKey = decryptPrivateKey(user.walletEncryptedKey);
+  const address = (deriveWalletAddress(user) ?? user.walletAddress) as Address;
+
+  await db
+    .update(usersTable)
+    .set({ walletEncryptedKey: null })
+    .where(eq(usersTable.clerkId, clerkId));
+
+  return { privateKey, address };
+}
+
+export async function registerClientWalletAddress(
+  clerkId: string,
+  address: Address,
+): Promise<typeof usersTable.$inferSelect> {
+  const existing = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.walletAddress, address))
+    .limit(1);
+
+  if (existing.length > 0 && existing[0].clerkId !== clerkId) {
+    throw new Error("Wallet address already linked to another account");
+  }
+
+  const [updated] = await db
+    .update(usersTable)
+    .set({
+      walletAddress: address,
+      walletEncryptedKey: null,
+      walletGatewayReady: false,
+    })
+    .where(eq(usersTable.clerkId, clerkId))
+    .returning();
+
+  if (!updated) throw new Error("User not found");
+  return updated;
+}
+
+export async function markClientGatewayReady(clerkId: string): Promise<void> {
+  await db
+    .update(usersTable)
+    .set({ walletGatewayReady: true })
+    .where(eq(usersTable.clerkId, clerkId));
+}
+
 export async function getUserPaymentScheme(clerkId: string): Promise<BatchEvmScheme> {
   const user = await provisionUserWallet(clerkId);
+  if (isClientWalletMode() && !userUsesCustodialWallet(user)) {
+    throw new Error("Client-side wallet required — private keys are not stored on the server");
+  }
   if (!user.walletEncryptedKey) {
     throw new Error("In-app wallet not ready");
   }
@@ -412,6 +528,9 @@ export async function fundWalletFromTreasury(clerkId: string, amount: string) {
   }
 
   const user = await provisionUserWallet(clerkId);
+  if (!user.walletAddress) {
+    throw new Error("Wallet address not registered — open Wallet in the app first");
+  }
   const walletAddress = user.walletAddress as Address;
   const txHash = await fundFromTreasury(walletAddress, amount);
   const onChain = (await getOnChainUsdcBalance(walletAddress)).toFixed(6);

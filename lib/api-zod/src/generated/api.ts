@@ -39,7 +39,6 @@ export const GetMeResponse = zod.object({
  * @summary Update current user profile
  */
 export const UpdateMeBody = zod.object({
-  "walletAddress": zod.string().optional(),
   "selectedCategories": zod.array(zod.string()).optional(),
   "onboardingComplete": zod.boolean().optional(),
   "name": zod.string().optional()

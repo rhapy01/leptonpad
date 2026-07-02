@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
 import pinoHttp from "pino-http";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
@@ -7,6 +8,9 @@ import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { internalErrorMessage } from "./lib/safeError";
+import { corsOptions } from "./middlewares/cors";
+import { apiRateLimit } from "./middlewares/rateLimit";
 import {
   CLERK_PROXY_PATH,
   clerkProxyMiddleware,
@@ -14,6 +18,13 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 
 const app: Express = express();
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }),
+);
 
 app.use(
   pinoHttp({
@@ -37,9 +48,9 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-app.use(cors({ credentials: true, origin: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors(corsOptions()));
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 app.use(
   clerkMiddleware((req) => ({
@@ -50,7 +61,7 @@ app.use(
   })),
 );
 
-app.use("/api", router);
+app.use("/api", apiRateLimit, router);
 
 const uploadDir = process.env.UPLOAD_DIR ?? join(process.cwd(), "uploads");
 if (existsSync(uploadDir)) {
@@ -58,10 +69,10 @@ if (existsSync(uploadDir)) {
 }
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  const message = err instanceof Error ? err.message : "Internal server error";
   logger.error({ err }, "Unhandled API error");
   if (!res.headersSent) {
-    res.status(500).json({ error: message });
+    const status = err instanceof Error && err.message.startsWith("CORS blocked") ? 403 : 500;
+    res.status(status).json({ error: internalErrorMessage() });
   }
 });
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@clerk/react";
 import {
   activateAppWallet,
-  fetchAppWallet,
+  fetchAppWalletFull,
   fetchPaymentConfig,
   type AppWalletStatus,
   type PaymentConfig,
@@ -23,7 +23,7 @@ export function usePaymentConfig() {
 }
 
 export function useAppWallet() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded, userId } = useAuth();
   const { config } = usePaymentConfig();
   const [wallet, setWallet] = useState<AppWalletStatus | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,7 +37,7 @@ export function useAppWallet() {
     }
     setLoading(true);
     try {
-      const status = await fetchAppWallet();
+      const status = await fetchAppWalletFull(config?.chainName ?? "arcTestnet");
       setWallet(status);
       return status;
     } catch {
@@ -46,7 +46,7 @@ export function useAppWallet() {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn, isLoaded]);
+  }, [isSignedIn, isLoaded, config?.chainName]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -55,15 +55,11 @@ export function useAppWallet() {
 
   const ensureReady = useCallback(async (): Promise<AppWalletStatus> => {
     if (!isLoaded) throw new Error("Loading your session…");
-    if (!isSignedIn) throw new Error("Sign in to use your LeptonPad wallet");
+    if (!isSignedIn || !userId) throw new Error("Sign in to use your LeptonPad wallet");
 
     let status = wallet;
     if (!status) {
-      try {
-        status = (await refresh()) ?? null;
-      } catch (err) {
-        throw err instanceof Error ? err : new Error("Could not load wallet");
-      }
+      status = (await refresh()) ?? null;
     }
     if (!status) throw new Error("Could not load wallet — refresh and try again");
 
@@ -82,7 +78,7 @@ export function useAppWallet() {
     } finally {
       setActivating(false);
     }
-  }, [wallet, refresh, config?.mockMode, isLoaded, isSignedIn]);
+  }, [wallet, refresh, config?.mockMode, isLoaded, isSignedIn, userId]);
 
-  return { wallet, loading, activating, refresh, ensureReady };
+  return { wallet, loading, activating, refresh, ensureReady, clientSide: wallet?.clientSide ?? config?.clientSideWallet };
 }

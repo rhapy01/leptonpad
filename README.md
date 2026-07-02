@@ -1,63 +1,22 @@
 # LeptonPad
 
-**Pay-per-piece publishing** — readers unlock individual articles, audio, and video with USDC on Arc. Creators keep **95%** of every sale (100% when verified). No subscriptions, no bundles.
+**Pay-per-piece publishing** — readers unlock individual articles, audio, and video with USDC on Arc. Creators keep **95%** of every sale (100% when verified).
 
 **Live:** https://lepton-pad.vercel.app
 
----
-
-## What it does
-
-| For readers | For creators |
-|-------------|--------------|
-| Browse, preview, unlock only what you want | Publish articles, audio, or video with a price |
-| In-app wallet — fund, pay, collect unlocked work | 95% revenue per sale, settled on-chain in seconds |
-| Unlocked content stays in your Collection forever | Verified creators keep 100% + badge |
-| USDC on Arc via Circle Gateway x402 | Earnings dashboard with Arc explorer links |
-
-> Subscriptions bundle. LeptonPad sells the single piece.
-
----
-
 ## Stack
 
-- **Frontend** — React, Vite, TipTap editor, Clerk auth
-- **API** — Express (serverless on Vercel)
-- **Database** — PostgreSQL + Drizzle ORM
-- **Payments** — Circle Gateway x402 → LeptonSplit contract on Arc testnet
-- **Email** — SMTP (welcome, receipts, newsletters, creator broadcasts)
+React + Vite · Express (Vercel serverless) · PostgreSQL · Clerk · Circle Gateway x402 · LeptonSplit on Arc testnet
 
----
+## Security
 
-## Project structure
+- **Client-side wallets** (`WALLET_MODE=client`) — private keys encrypted in browser IndexedDB; server stores address only
+- XSS sanitization (server + DOMPurify), rate limits, CORS allowlist, helmet
+- SMTP personalized emails; admin via `INITIAL_ADMIN_EMAILS`
 
-```
-artifacts/
-  leptonpad/      # React frontend
-  api-server/     # Express API
-api/              # Vercel serverless entry
-lib/
-  db/             # Drizzle schema & migrations
-  api-zod/        # Shared API types
-contracts/        # LeptonSplit.sol
-scripts/          # Seed, deploy, Vercel build
-```
-
----
-
-## Local development
-
-### Prerequisites
-
-- Node.js 20+
-- pnpm 9+
-- PostgreSQL
-
-### Setup
+## Local dev
 
 ```bash
-git clone https://github.com/rhapy01/leptonpad.git
-cd leptonpad
 pnpm install
 cp .env.example .env
 pnpm --filter @workspace/db run push
@@ -65,23 +24,16 @@ pnpm --filter leptonpad dev
 pnpm --filter api-server dev
 ```
 
-Frontend: http://localhost:25139  
-API: http://localhost:8787
+## Deploy (Vercel)
 
----
+```bash
+node scripts/push-vercel-env.mjs --production-only
+npx vercel deploy --prod
+```
 
-## Environment variables
+Required production env: `DATABASE_URL`, Clerk keys, Gateway/Split contract vars, `WALLET_MODE=client`, `VITE_WALLET_KDF_PEPPER`, `INITIAL_ADMIN_EMAILS`, `MOCK_PAYMENTS=false`.
 
-See [`.env.example`](.env.example) for the full list.
-
----
-
-## Hackathon
-
-Built for **Lepton Agents Hackathon — RFB 06 (Creator & Publisher Monetization)**.  
-See [`HACKATHON.md`](HACKATHON.md) for demo script and submission checklist.
-
----
+See [`.env.example`](.env.example) and [`HACKATHON.md`](HACKATHON.md).
 
 ## License
 

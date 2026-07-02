@@ -1,3 +1,5 @@
+import { writeRateLimit } from "../middlewares/rateLimit";
+import { assertMaxLength, MAX_COMMENT_LENGTH } from "../lib/sanitizeHtml";
 import { Router } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { eq, and, desc, sql, count } from "drizzle-orm";
@@ -129,12 +131,19 @@ router.get("/content/:contentId/comments", async (req, res): Promise<void> => {
   res.json(enriched);
 });
 
-router.post("/content/:contentId/comments", async (req, res): Promise<void> => {
+router.post("/content/:contentId/comments", writeRateLimit, async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   const contentId = parseInt(req.params.contentId, 10);
   const { body, parentId } = req.body as { body?: string; parentId?: number };
   if (!body?.trim()) { res.status(400).json({ error: "Comment body required" }); return; }
+
+  try {
+    assertMaxLength(body.trim(), MAX_COMMENT_LENGTH, "comment");
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Comment too long" });
+    return;
+  }
 
   await getOrCreateUser(userId);
   const [comment] = await db.insert(commentsTable).values({

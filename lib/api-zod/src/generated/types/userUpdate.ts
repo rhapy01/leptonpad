@@ -7,7 +7,6 @@
  */
 
 export interface UserUpdate {
-  walletAddress?: string;
   selectedCategories?: string[];
   onboardingComplete?: boolean;
   name?: string;

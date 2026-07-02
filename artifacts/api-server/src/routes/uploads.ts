@@ -10,8 +10,10 @@ import {
   UPLOAD_DIR,
 } from "../lib/blobStorage";
 import { cloudinaryEnabled } from "../lib/cloudinaryStorage";
+import { uploadRateLimit } from "../middlewares/rateLimit";
 
 const router = Router();
+router.use(uploadRateLimit);
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_MEDIA_BYTES = 50 * 1024 * 1024;

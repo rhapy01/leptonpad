@@ -30,6 +30,7 @@ import { ReadingSidebarMore } from "@/components/ReadingSidebarMore";
 import { YoutubeEmbed } from "@/components/YoutubeEmbed";
 import { isYoutubeMediaUrl } from "@/lib/youtube";
 import { resolveCoverUrl } from "@/lib/contentCover";
+import { sanitizeArticleHtml } from "@/lib/sanitizeHtml";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { useToast } from "@/hooks/use-toast";
 
@@ -242,9 +243,11 @@ export default function ReadingModePage({ id }: { id: number }) {
   const coverSrc = resolveCoverUrl(content.coverImageUrl, content.categorySlug, content.id);
   const typeLabel = TYPE_LABELS[content.type] ?? "Story";
 
+  const safeHtml = (html: string) => sanitizeArticleHtml(html);
+
   const renderBody = () => {
     if (content.type === "article") {
-      if (isHtml) return <div dangerouslySetInnerHTML={{ __html: content.body ?? "" }} />;
+      if (isHtml) return <div dangerouslySetInnerHTML={{ __html: safeHtml(content.body ?? "") }} />;
       return (
         <div className="space-y-5">
           {(content.body || content.previewText || "").split("\n\n").map((para, i) => (
@@ -265,7 +268,7 @@ export default function ReadingModePage({ id }: { id: number }) {
           )}
           {content.body && (
             isHtml
-              ? <div dangerouslySetInnerHTML={{ __html: content.body }} />
+              ? <div dangerouslySetInnerHTML={{ __html: safeHtml(content.body) }} />
               : content.body.split("\n\n").map((para, i) => <p key={i}>{para}</p>)
           )}
         </div>
@@ -283,7 +286,7 @@ export default function ReadingModePage({ id }: { id: number }) {
           )}
           {content.body && (
             isHtml
-              ? <div dangerouslySetInnerHTML={{ __html: content.body }} />
+              ? <div dangerouslySetInnerHTML={{ __html: safeHtml(content.body) }} />
               : content.body.split("\n\n").map((para, i) => <p key={i}>{para}</p>)
           )}
         </div>

@@ -580,8 +580,6 @@ components:
     UserUpdate:
       type: object
       properties:
-        walletAddress:
-          type: string
         selectedCategories:
           type: array
           items:

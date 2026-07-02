@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { and, eq } from "drizzle-orm";
-import { db, contentTable, paymentsTable } from "@workspace/db";
+import { db, contentTable, paymentsTable, usersTable } from "@workspace/db";
 import { UnlockContentBody } from "@workspace/api-zod";
 import { getOrCreateUser } from "./users";
 import {
@@ -21,6 +21,7 @@ import {
 import { internalApiBase, payGatewayResource, gatewayAuthHeaders } from "../lib/gatewayPayServer";
 import { resolveSellerAddress } from "../lib/settlementSeller";
 import { getSettlementRailInfo } from "../lib/settlementRail";
+import { isClientWalletMode, userUsesCustodialWallet } from "../lib/walletMode";
 
 const router = Router();
 
@@ -77,6 +78,7 @@ router.get("/config", (_req, res): void => {
     minPrice: 0.000001,
     creatorShare: 0.95,
     inAppWallet: true,
+    clientSideWallet: isClientWalletMode(),
   });
 });
 
@@ -361,6 +363,21 @@ router.post("/unlock-app/:contentId", async (req, res): Promise<void> => {
   }
 
   try {
+    const [userRow] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.clerkId, userId))
+      .limit(1);
+
+    if (isClientWalletMode() && userRow && !userUsesCustodialWallet(userRow)) {
+      res.status(400).json({
+        error: "Pay with your in-browser wallet — private keys never leave your device",
+        clientSide: true,
+        gatewayUrl: `/api/payments/gateway/${contentId}`,
+      });
+      return;
+    }
+
     const activation = await activateGatewayWallet(userId);
     if (!activation.ready) {
       res.status(402).json({

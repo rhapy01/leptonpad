@@ -14,8 +14,25 @@ import { getCreatorVerifiedSnapshot } from "../lib/contentPublishSnapshot";
 import { notifySubscribersOfNewContent } from "../lib/broadcastSubscribers";
 import { enrichContent } from "../lib/enrichContent";
 import { paymentGrantsAccess } from "../lib/recordPayment";
+import { sanitizeArticleHtml, assertMaxLength, MAX_CONTENT_BODY_LENGTH } from "../lib/sanitizeHtml";
+import { safeHttpUrl } from "../lib/validateUrl";
+import { writeRateLimit, viewRateLimit } from "../middlewares/rateLimit";
 
 const router = Router();
+
+function prepareBody(raw: string | null | undefined): string | null {
+  if (raw == null || raw.trim() === "") return null;
+  assertMaxLength(raw, MAX_CONTENT_BODY_LENGTH, "body");
+  if (raw.trimStart().startsWith("<")) {
+    return sanitizeArticleHtml(raw);
+  }
+  return raw.trim();
+}
+
+function prepareMediaUrl(raw: string | null | undefined): string | null {
+  if (raw == null || raw.trim() === "") return null;
+  return safeHttpUrl(raw) ?? null;
+}
 
 // GET /api/content
 router.get("/", async (req, res): Promise<void> => {
@@ -145,21 +162,35 @@ router.get("/featured", async (_req, res): Promise<void> => {
 });
 
 // POST /api/content
-router.post("/", async (req, res): Promise<void> => {
+router.post("/", writeRateLimit, async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const parsed = CreateContentBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
+  let rawBody: string | null;
+  try {
+    rawBody = prepareBody(parsed.data.body ?? null);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Invalid body" });
+    return;
+  }
+
   await getOrCreateUser(userId);
   const body = parsed.data;
   const {
-    title, type, categorySlug, previewText, coverImageUrl, audioUrl, videoUrl, price,
+    title, type, categorySlug, previewText, price,
   } = body;
-  const rawBody = body.body;
+  const coverImageUrl = prepareMediaUrl(body.coverImageUrl ?? null);
+  const audioUrl = prepareMediaUrl(body.audioUrl ?? null);
+  const videoUrl = prepareMediaUrl(body.videoUrl ?? null);
   const tags = (body as { tags?: string[] }).tags ?? [];
   const status = (body as { status?: string }).status ?? "published";
+  if (!["draft", "published", "scheduled"].includes(status)) {
+    res.status(400).json({ error: "Invalid status" });
+    return;
+  }
   const scheduledAt = (body as { scheduledAt?: string }).scheduledAt;
   const metaDescription = (body as { metaDescription?: string }).metaDescription;
   const language = (body as { language?: string }).language ?? "en";
@@ -277,7 +308,7 @@ router.get("/:id", async (req, res): Promise<void> => {
 });
 
 // PUT /api/content/:id
-router.put("/:id", async (req, res): Promise<void> => {
+router.put("/:id", writeRateLimit, async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
@@ -293,7 +324,18 @@ router.put("/:id", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const existing = items[0];
-  if (parsed.data.body && existing.body !== parsed.data.body) {
+  let sanitizedBody: string | undefined;
+  if (parsed.data.body !== undefined) {
+    try {
+      const next = prepareBody(parsed.data.body);
+      sanitizedBody = next ?? undefined;
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : "Invalid body" });
+      return;
+    }
+  }
+
+  if (sanitizedBody && existing.body !== sanitizedBody) {
     await db.insert(contentVersionsTable).values({
       contentId: id,
       title: existing.title,
@@ -311,9 +353,18 @@ router.put("/:id", async (req, res): Promise<void> => {
     published?: boolean;
   };
 
+  if (extra.status && !["draft", "published", "scheduled"].includes(extra.status)) {
+    res.status(400).json({ error: "Invalid status" });
+    return;
+  }
+
   const updateData: Record<string, unknown> = {
     ...parsed.data,
     ...(parsed.data.price !== undefined ? { price: String(parsed.data.price) } : {}),
+    ...(sanitizedBody !== undefined ? { body: sanitizedBody } : {}),
+    ...(parsed.data.coverImageUrl !== undefined ? { coverImageUrl: prepareMediaUrl(parsed.data.coverImageUrl ?? null) } : {}),
+    ...(parsed.data.audioUrl !== undefined ? { audioUrl: prepareMediaUrl(parsed.data.audioUrl ?? null) } : {}),
+    ...(parsed.data.videoUrl !== undefined ? { videoUrl: prepareMediaUrl(parsed.data.videoUrl ?? null) } : {}),
   };
   if (extra.tags) updateData.tags = extra.tags.map(t => t.toLowerCase());
   if (extra.status) updateData.status = extra.status;
@@ -423,7 +474,7 @@ router.get("/:id/next", async (req, res): Promise<void> => {
 });
 
 // POST /api/content/:id/view
-router.post("/:id/view", async (req, res): Promise<void> => {
+router.post("/:id/view", viewRateLimit, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }

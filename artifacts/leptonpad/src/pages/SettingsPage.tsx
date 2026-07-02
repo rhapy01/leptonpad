@@ -20,7 +20,6 @@ import { FileUploadField } from "@/components/FileUploadField";
 import { useAppWallet } from "@/hooks/useAppWallet";
 
 const settingsSchema = z.object({
-  walletAddress: z.string().optional(),
   selectedCategories: z.array(z.string()).min(1, "Select at least one category"),
   bio: z.string().optional(),
   website: z.string().optional(),
@@ -78,13 +77,12 @@ export default function SettingsPage() {
 
   const form = useForm<SettingsForm>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: { walletAddress: "", selectedCategories: [], bio: "", website: "", twitterUrl: "", linkedinUrl: "", country: "" },
+    defaultValues: { selectedCategories: [], bio: "", website: "", twitterUrl: "", linkedinUrl: "", country: "" },
   });
 
   useEffect(() => {
     if (me) {
       form.reset({
-        walletAddress: me.walletAddress ?? "",
         selectedCategories: me.selectedCategories,
         bio: (me as { bio?: string }).bio ?? "",
         website: (me as { website?: string }).website ?? "",
@@ -109,7 +107,7 @@ export default function SettingsPage() {
 
   const onSubmit = async (data: SettingsForm) => {
     await updateMe.mutateAsync({
-      data: { walletAddress: data.walletAddress, selectedCategories: data.selectedCategories, name: me?.name },
+      data: { selectedCategories: data.selectedCategories, name: me?.name },
     });
     await updateProfileExtended({
       bio: data.bio,
@@ -215,7 +213,7 @@ export default function SettingsPage() {
 
           <SettingsSection
             title="In-app wallet"
-            description="LeptonPad provisions an internal wallet for unlocking paid content. No MetaMask required."
+            description="LeptonPad provisions an in-app wallet for unlocking paid content. Private keys are encrypted in your browser — never stored on our servers."
           >
             {wallet?.address ? (
               <p className="homepage-body text-xs font-mono break-all">

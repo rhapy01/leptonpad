@@ -52,6 +52,9 @@ const PRODUCTION_BASE = {
   PUBLIC_URL: "https://lepton-pad.vercel.app",
   APP_URL: "https://lepton-pad.vercel.app",
   INITIAL_ADMIN_EMAILS: "akintoyeisaac5@gmail.com",
+  WALLET_MODE: "client",
+  VITE_WALLET_KDF_PEPPER: "leptonpad-client-wallet-v1",
+  MOCK_PAYMENTS: "false",
 };
 
 function productionOverrides(vars) {

@@ -10,8 +10,8 @@ export const usersTable = pgTable("users", {
   imageUrl: text("image_url"),
   bannerUrl: text("banner_url"),
   walletAddress: text("wallet_address"),
-  /** AES-256-GCM encrypted testnet private key — in-app wallet (hackathon demo). */
   walletEncryptedKey: text("wallet_encrypted_key"),
+  /** Legacy custodial only — client-side wallets leave this null. */
   walletGatewayReady: boolean("wallet_gateway_ready").notNull().default(false),
   selectedCategories: text("selected_categories").array().notNull().default([]),
   onboardingComplete: boolean("onboarding_complete").notNull().default(false),

@@ -1,15 +1,27 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
+import { verifyMessage, isAddress, type Address, type Hex } from "viem";
 import {
   activateGatewayWallet,
   depositToGateway,
   fundWalletFromTreasury,
   getAppWalletStatus,
   withdrawFromGateway,
+  registerClientWalletAddress,
+  markClientGatewayReady,
+  exportLegacyWalletKey,
 } from "../lib/appWallet";
 import { getOrCreateUser } from "./users";
+import { walletFundRateLimit } from "../middlewares/rateLimit";
+import { isClientWalletMode } from "../lib/walletMode";
 
 const router = Router();
+
+const REGISTER_TTL_MS = 5 * 60 * 1000;
+
+function registrationMessage(clerkId: string, timestamp: number): string {
+  return `LeptonPad wallet registration\nclerkId:${clerkId}\ntimestamp:${timestamp}`;
+}
 
 function parseAmount(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
@@ -19,7 +31,7 @@ function parseAmount(body: unknown): string | null {
   return null;
 }
 
-// GET /api/wallet — in-app wallet status (auto-provisions on first call)
+// GET /api/wallet — wallet status (address only for client-side wallets)
 router.get("/", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
@@ -37,11 +49,111 @@ router.get("/", async (req, res): Promise<void> => {
   }
 });
 
-// POST /api/wallet/activate — fund + deposit into Circle Gateway (testnet)
+// POST /api/wallet/register — link browser-generated address (signature proves ownership)
+router.post("/register", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  if (!isClientWalletMode()) {
+    res.status(400).json({ error: "Server wallet mode is custodial — client registration disabled" });
+    return;
+  }
+
+  const { address, signature, timestamp } = req.body as {
+    address?: string;
+    signature?: Hex;
+    timestamp?: number;
+  };
+
+  if (!address || !isAddress(address)) {
+    res.status(400).json({ error: "Valid address required" });
+    return;
+  }
+  if (!signature || typeof timestamp !== "number") {
+    res.status(400).json({ error: "signature and timestamp required" });
+    return;
+  }
+  if (Math.abs(Date.now() - timestamp) > REGISTER_TTL_MS) {
+    res.status(400).json({ error: "Registration signature expired — try again" });
+    return;
+  }
+
+  const message = registrationMessage(userId, timestamp);
+  const valid = await verifyMessage({
+    address: address as Address,
+    message,
+    signature,
+  });
+  if (!valid) {
+    res.status(403).json({ error: "Invalid wallet signature" });
+    return;
+  }
+
+  try {
+    await getOrCreateUser(userId);
+    const user = await registerClientWalletAddress(userId, address as Address);
+    res.json({
+      address: user.walletAddress,
+      clientSide: true,
+      registered: true,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Registration failed";
+    res.status(409).json({ error: message });
+  }
+});
+
+// POST /api/wallet/export-legacy-key — one-time migration from custodial to client wallet
+router.post("/export-legacy-key", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  if (!isClientWalletMode()) {
+    res.status(404).json({ error: "Not available" });
+    return;
+  }
+
+  const exported = await exportLegacyWalletKey(userId);
+  if (!exported) {
+    res.status(404).json({ error: "No server-stored wallet to migrate" });
+    return;
+  }
+
+  res.json(exported);
+});
+
+// POST /api/wallet/gateway-ready — client reports successful Gateway activation
+router.post("/gateway-ready", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  await getOrCreateUser(userId);
+  await markClientGatewayReady(userId);
+  res.json({ ready: true });
+});
+
+// POST /api/wallet/activate — custodial only; client wallets activate in the browser
 router.post("/activate", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  if (isClientWalletMode()) {
+    res.status(400).json({
+      error: "Wallet activation runs in your browser — private keys never leave your device",
+      clientSide: true,
+    });
     return;
   }
 
@@ -56,11 +168,15 @@ router.post("/activate", async (req, res): Promise<void> => {
   }
 });
 
-// POST /api/wallet/withdraw — move USDC from Gateway to on-chain wallet
 router.post("/withdraw", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  if (isClientWalletMode()) {
+    res.status(400).json({ error: "Withdraw in the browser — keys stay on your device", clientSide: true });
     return;
   }
 
@@ -81,11 +197,15 @@ router.post("/withdraw", async (req, res): Promise<void> => {
   }
 });
 
-// POST /api/wallet/deposit — move on-chain USDC into Gateway for spending
 router.post("/deposit", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  if (isClientWalletMode()) {
+    res.status(400).json({ error: "Deposit in the browser — keys stay on your device", clientSide: true });
     return;
   }
 
@@ -106,8 +226,8 @@ router.post("/deposit", async (req, res): Promise<void> => {
   }
 });
 
-// POST /api/wallet/fund — request testnet USDC from treasury to on-chain wallet
-router.post("/fund", async (req, res): Promise<void> => {
+// POST /api/wallet/fund — treasury top-up (address only; no private key needed)
+router.post("/fund", walletFundRateLimit, async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });

@@ -3,10 +3,11 @@ import { useAuth } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { setClerkTokenGetter } from "@/lib/apiFetch";
+import { setClerkUserIdGetter } from "@/lib/appWallet";
 
 /** Wires Clerk session tokens into API client + manual fetch helpers. */
 export function ClerkApiAuthBridge() {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -22,12 +23,14 @@ export function ClerkApiAuthBridge() {
 
     setAuthTokenGetter(getter);
     setClerkTokenGetter(getter);
+    setClerkUserIdGetter(() => userId ?? null);
 
     return () => {
       setAuthTokenGetter(null);
       setClerkTokenGetter(null);
+      setClerkUserIdGetter(null);
     };
-  }, [getToken, isLoaded]);
+  }, [getToken, isLoaded, userId]);
 
   // Refetch unlock/access queries once the session token is available.
   useEffect(() => {
