@@ -79,9 +79,10 @@ if (isProd && process.env.MOCK_PAYMENTS === "true") {
 
 if (isProd) {
   const walletSecret = process.env.WALLET_ENCRYPTION_SECRET?.trim();
-  if (process.env.WALLET_MODE?.trim().toLowerCase() === "custodial") {
+  const clientOnly = process.env.WALLET_MODE?.trim().toLowerCase() === "client";
+  if (!clientOnly) {
     if (!walletSecret || walletSecret.length < 32) {
-      throw new Error("WALLET_ENCRYPTION_SECRET must be at least 32 characters when WALLET_MODE=custodial");
+      throw new Error("WALLET_ENCRYPTION_SECRET must be at least 32 characters for account-linked wallets");
     }
   }
   if (!process.env.INITIAL_ADMIN_EMAILS?.trim()) {

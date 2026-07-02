@@ -1,10 +1,11 @@
-/** client = keys in browser only; custodial = legacy server-encrypted keys (dev fallback). */
+/** custodial (default) = encrypted key in Postgres, follows Clerk login on any device. */
+/** client = optional browser-only keys (IndexedDB); does not sync across devices. */
 export type WalletMode = "client" | "custodial";
 
 export function walletMode(): WalletMode {
   const mode = process.env.WALLET_MODE?.trim().toLowerCase();
-  if (mode === "custodial") return "custodial";
-  return "client";
+  if (mode === "client") return "client";
+  return "custodial";
 }
 
 export function isClientWalletMode(): boolean {

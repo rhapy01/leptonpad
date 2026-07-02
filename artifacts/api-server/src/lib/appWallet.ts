@@ -144,11 +144,11 @@ export async function provisionUserWallet(clerkId: string): Promise<typeof users
   const user = existing[0];
 
   if (isClientWalletMode()) {
-    if (user.walletAddress) return reconcileWalletAddress(user);
+    if (user.walletEncryptedKey) return reconcileWalletAddress(user);
     return user;
   }
 
-  if (user.walletAddress && user.walletEncryptedKey) {
+  if (user.walletEncryptedKey) {
     return reconcileWalletAddress(user);
   }
 

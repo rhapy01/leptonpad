@@ -139,10 +139,10 @@ export function WalletFundsPanel({ variant = "full" }: Props) {
             </h2>
             <p className="text-xs mt-1 max-w-lg" style={{ color: "#78716C" }}>
           {wallet.clientSide
-            ? "Private keys are encrypted in your browser (IndexedDB). LeptonPad never stores them on the server."
+            ? "Private keys are encrypted in your browser (IndexedDB). They do not sync when you change devices."
             : variant === "embedded"
-              ? "Creator earnings land on-chain. Deposit to Gateway to unlock more paid content."
-              : "Gateway is for spending inside LeptonPad. On-chain is your Arc wallet (where earnings arrive)."}
+              ? "Your wallet is tied to your account — sign in anywhere to spend. Deposit to Gateway to unlock paid content."
+              : "Your wallet follows your LeptonPad account. Gateway is for in-app spending; on-chain is where earnings arrive."}
         </p>
           </div>
           {variant === "embedded" && (
