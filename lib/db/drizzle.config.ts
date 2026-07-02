@@ -34,6 +34,7 @@ export default defineConfig({
     join(configDir, "src/schema/content.ts"),
     join(configDir, "src/schema/payments.ts"),
     join(configDir, "src/schema/ai_suggestions.ts"),
+    join(configDir, "src/schema/security.ts"),
   ],
   dialect: "postgresql",
   dbCredentials: {

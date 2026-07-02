@@ -1,5 +1,7 @@
 /** Attach Clerk session JWT to same-origin API calls (required on Vercel with dev instances). */
 
+import { getDeviceId } from "./deviceId";
+
 type TokenGetter = () => Promise<string | null>;
 
 let getClerkToken: TokenGetter | null = null;
@@ -21,6 +23,10 @@ export async function apiFetch(
     } catch {
       // Unauthenticated request — server may still accept public routes.
     }
+  }
+
+  if (!headers.has("x-lepton-device-id")) {
+    headers.set("x-lepton-device-id", getDeviceId());
   }
 
   return fetch(input, {

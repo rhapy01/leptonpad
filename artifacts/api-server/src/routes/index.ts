@@ -19,6 +19,7 @@ import uploadsRouter, { UPLOAD_DIR } from "./uploads";
 import gamificationRouter from "./gamification";
 import awasRouter from "./awas";
 import intelligenceRouter from "./intelligence";
+import securityRouter from "./security";
 
 const router: IRouter = Router();
 
@@ -33,6 +34,7 @@ router.use("/stats", statsRouter);
 router.use("/admin", adminRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/wallet", walletRouter);
+router.use("/security", securityRouter);
 router.use("/social", socialRouter);
 router.use("/creators", creatorsRouter);
 router.use("/discovery", discoveryRouter);

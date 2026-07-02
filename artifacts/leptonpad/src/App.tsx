@@ -28,6 +28,7 @@ import AdminDashboardPage from "@/pages/dashboard/AdminDashboardPage";
 import WalletPage from "@/pages/WalletPage";
 import RightsPage from "@/pages/RightsPage";
 import { AuthGate } from "@/components/AuthGate";
+import { DeviceVerificationGate } from "@/components/DeviceVerificationGate";
 import { ClerkApiAuthBridge } from "@/components/ClerkApiAuthBridge";
 import { useGetMe } from "@workspace/api-client-react";
 
@@ -118,7 +119,11 @@ function HomeRoute() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  return <AuthGate>{children}</AuthGate>;
+  return (
+    <AuthGate>
+      <DeviceVerificationGate>{children}</DeviceVerificationGate>
+    </AuthGate>
+  );
 }
 
 function AdminGuard({ children }: { children: React.ReactNode }) {
@@ -154,7 +159,9 @@ function Router() {
       <Route path="/sign-up/*?" component={SignUpPage} />
       <Route path="/onboarding">
         <Show when="signed-in">
-          <OnboardingPage />
+          <DeviceVerificationGate>
+            <OnboardingPage />
+          </DeviceVerificationGate>
         </Show>
         <Show when="signed-out">
           <Redirect to="/feed" />

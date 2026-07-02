@@ -14,6 +14,8 @@ import {
 import { getOrCreateUser } from "./users";
 import { walletFundRateLimit } from "../middlewares/rateLimit";
 import { isClientWalletMode } from "../lib/walletMode";
+import { requireTrustedDevice, requireWalletUnlock } from "../middlewares/deviceSecurity";
+import { isWalletUnlocked } from "../lib/walletSession";
 
 const router = Router();
 
@@ -42,7 +44,19 @@ router.get("/", async (req, res): Promise<void> => {
   try {
     await getOrCreateUser(userId);
     const status = await getAppWalletStatus(userId);
-    res.json(status);
+    if (!isWalletUnlocked(req, userId)) {
+      const addr = status.address;
+      res.json({
+        locked: true,
+        address: addr,
+        addressMasked: addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : null,
+        gatewayReady: status.gatewayReady,
+        mockMode: status.mockMode,
+        clientSide: status.clientSide,
+      });
+      return;
+    }
+    res.json({ ...status, locked: false });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to load wallet";
     res.status(500).json({ error: message });
@@ -142,7 +156,7 @@ router.post("/gateway-ready", async (req, res): Promise<void> => {
 });
 
 // POST /api/wallet/activate — custodial only; client wallets activate in the browser
-router.post("/activate", async (req, res): Promise<void> => {
+router.post("/activate", requireTrustedDevice, requireWalletUnlock, async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
@@ -168,7 +182,7 @@ router.post("/activate", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/withdraw", async (req, res): Promise<void> => {
+router.post("/withdraw", requireTrustedDevice, requireWalletUnlock, async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
@@ -197,7 +211,7 @@ router.post("/withdraw", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/deposit", async (req, res): Promise<void> => {
+router.post("/deposit", requireTrustedDevice, requireWalletUnlock, async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
@@ -227,7 +241,7 @@ router.post("/deposit", async (req, res): Promise<void> => {
 });
 
 // POST /api/wallet/fund — treasury top-up (address only; no private key needed)
-router.post("/fund", walletFundRateLimit, async (req, res): Promise<void> => {
+router.post("/fund", walletFundRateLimit, requireTrustedDevice, requireWalletUnlock, async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });

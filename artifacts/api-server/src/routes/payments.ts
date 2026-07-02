@@ -22,6 +22,7 @@ import { internalApiBase, payGatewayResource, gatewayAuthHeaders } from "../lib/
 import { resolveSellerAddress } from "../lib/settlementSeller";
 import { getSettlementRailInfo } from "../lib/settlementRail";
 import { isClientWalletMode, userUsesCustodialWallet } from "../lib/walletMode";
+import { requireTrustedDevice, requireWalletUnlock } from "../middlewares/deviceSecurity";
 
 const router = Router();
 
@@ -261,7 +262,7 @@ router.get(
 );
 
 // POST /api/payments/unlock-app/:contentId — in-app wallet x402 unlock (no MetaMask)
-router.post("/unlock-app/:contentId", async (req, res): Promise<void> => {
+router.post("/unlock-app/:contentId", requireTrustedDevice, requireWalletUnlock, async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });

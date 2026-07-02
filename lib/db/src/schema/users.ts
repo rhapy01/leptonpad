@@ -11,6 +11,11 @@ export const usersTable = pgTable("users", {
   bannerUrl: text("banner_url"),
   walletAddress: text("wallet_address"),
   walletEncryptedKey: text("wallet_encrypted_key"),
+  /** AES-256-GCM encrypted TOTP secret for Google Authenticator. */
+  totpSecretEncrypted: text("totp_secret_encrypted"),
+  totpEnabled: boolean("totp_enabled").notNull().default(false),
+  /** scrypt hash of wallet-specific PIN/password (separate from Clerk login). */
+  walletPinHash: text("wallet_pin_hash"),
   /** Legacy custodial only — client-side wallets leave this null. */
   walletGatewayReady: boolean("wallet_gateway_ready").notNull().default(false),
   selectedCategories: text("selected_categories").array().notNull().default([]),

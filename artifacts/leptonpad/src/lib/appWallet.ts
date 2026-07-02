@@ -16,6 +16,8 @@ export interface AppWalletStatus {
   onChainBalance?: string | null;
   mockMode: boolean;
   clientSide?: boolean;
+  locked?: boolean;
+  addressMasked?: string | null;
 }
 
 export interface PaymentConfig {

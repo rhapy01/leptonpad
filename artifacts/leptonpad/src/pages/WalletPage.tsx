@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { WalletFundsPanel } from "@/components/WalletFundsPanel";
 import { SettlementRailPanel } from "@/components/SettlementRailPanel";
+import { WalletUnlockGate } from "@/components/WalletUnlockGate";
 
 export default function WalletPage() {
   return (
@@ -11,7 +13,9 @@ export default function WalletPage() {
     >
       <div className="max-w-xl">
         <SettlementRailPanel variant="public" />
-        <WalletFundsPanel variant="full" />
+        <WalletUnlockGate>
+          <WalletFundsPanel variant="full" />
+        </WalletUnlockGate>
       </div>
     </DashboardShell>
   );

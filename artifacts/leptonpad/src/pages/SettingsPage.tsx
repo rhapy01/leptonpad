@@ -16,6 +16,7 @@ import { CreatorName } from "@/components/CreatorName";
 import { useToast } from "@/hooks/use-toast";
 import { updateProfileExtended, exportContent } from "@/lib/platformApi";
 import { GamificationPanel } from "@/components/GamificationPanel";
+import { SecuritySettingsPanel } from "@/components/SecuritySettingsPanel";
 import { FileUploadField } from "@/components/FileUploadField";
 import { useAppWallet } from "@/hooks/useAppWallet";
 
@@ -212,8 +213,15 @@ export default function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection
+            title="Security & wallet protection"
+            description="Required for asset safety — especially before using LeptonPad on another phone."
+          >
+            <SecuritySettingsPanel />
+          </SettingsSection>
+
+          <SettingsSection
             title="In-app wallet"
-            description="LeptonPad provisions an in-app wallet for unlocking paid content. Private keys are encrypted in your browser — never stored on our servers."
+            description="Account-linked USDC wallet. Keys are AES-256 encrypted on our servers (not plaintext). Open Wallet to enter your wallet password."
           >
             {wallet?.address ? (
               <p className="homepage-body text-xs font-mono break-all">
