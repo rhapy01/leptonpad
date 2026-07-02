@@ -2,6 +2,8 @@
 
 A premium multi-format content publishing platform where creators publish articles, audio, and video; readers pay per piece in USDC via Arc/x402; creators keep 95%.
 
+**Hackathon:** [Lepton Agents](https://lepton.thecanteenapp.com) — **RFB 06 only** (Creator & Publisher Monetization). See `HACKATHON.md` for submission positioning.
+
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080, proxied at `/api`)
@@ -9,9 +11,16 @@ A premium multi-format content publishing platform where creators publish articl
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `cd scripts && npx tsx ../lib/db/src/push.ts` — push DB schema to Neon (Windows-friendly)
+- `pnpm --filter @workspace/db run push` — same on Linux/Replit if tsx is linked
 - `pnpm --filter @workspace/scripts run seed` — seed categories and demo content
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env (root `.env`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`
+- Local ports: `PORT=25139` (frontend), `API_PORT=8787` (API)
+- Required for real payments: `GATEWAY_SELLER_ADDRESS`, `TREASURY_PRIVATE_KEY` (fund treasury at [Circle Faucet](https://faucet.circle.com/))
+- Generate wallets: `npx tsx scripts/src/hackathon-wallets.ts`
+- Settlement: Circle Gateway x402 on Arc testnet — USDC goes to creator in-app wallets; platform seller for seed content
+- Optional dev only: `MOCK_PAYMENTS=true` — skips on-chain settlement (not for hackathon demo)
+- Email (Google SMTP): `SMTP_USER`, `SMTP_PASS` — optional `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`. Use a [Google App Password](https://myaccount.google.com/apppasswords).
 
 ## Stack
 
@@ -35,9 +44,9 @@ A premium multi-format content publishing platform where creators publish articl
 
 - **Three visual worlds**: classical editorial homepage (paper bg, Playfair Display serif), dark platform (#0D0F14, gold+teal accents), cream reading mode (Lora serif). Each is a distinct CSS variable set.
 - **Contract-first API**: OpenAPI YAML is the single source of truth. Orval generates Zod schemas for server validation and React Query hooks for the client.
-- **x402 / Arc payments**: USDC micropayments per piece. 95%/5% split at smart contract level. Sub-500ms finality. Minimum price $0.000001.
+- **x402 / Arc payments**: Circle Gateway collects USDC to **LeptonSplit** contract (`contracts/LeptonSplit.sol`). Owner executes atomic on-chain split (95/5 or 100/0). Deploy: `cd artifacts/api-server/scripts && node deploy-split.mjs`
 - **Clerk auth via proxy**: `@clerk/express` middleware + proxy so the API server handles Clerk endpoints without frontend CDN dependency.
-- **AI pricing agent**: Rule-based logic (no external API) calibrated against platform median metrics. Surfaces suggestions to creators on the earnings dashboard.
+- **AI pricing agent**: Rule-based logic calibrated against platform median metrics. Auto-reviews creator catalog on earnings dashboard load; surfaces raise/lower/keep suggestions with apply/dismiss actions.
 
 ## Product
 

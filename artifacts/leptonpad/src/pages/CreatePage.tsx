@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  useCreateContent,
   useListCategories,
   useRequestAiSuggestion,
   getListContentQueryKey,
@@ -12,6 +11,11 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { PlatformLayout } from "@/components/PlatformLayout";
 import { TipTapEditor } from "@/components/TipTapEditor";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { createContentExtended } from "@/lib/platformApi";
+import { AiWritingPanel } from "@/components/AiWritingPanel";
+import { FileUploadField } from "@/components/FileUploadField";
+import { useI18n } from "@/lib/i18n";
 
 const createSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -19,10 +23,18 @@ const createSchema = z.object({
   categorySlug: z.string().min(1, "Category is required"),
   body: z.string().optional(),
   previewText: z.string().optional(),
+  coverImageUrl: z.string().min(1, "Upload a cover image"),
   audioUrl: z.string().optional(),
   videoUrl: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be 0 or more"),
   published: z.boolean().default(true),
+}).superRefine((data, ctx) => {
+  if (data.type === "audio" && !data.audioUrl?.trim()) {
+    ctx.addIssue({ code: "custom", message: "Upload an audio file", path: ["audioUrl"] });
+  }
+  if (data.type === "video" && !data.videoUrl?.trim()) {
+    ctx.addIssue({ code: "custom", message: "Upload a video file", path: ["videoUrl"] });
+  }
 });
 
 type CreateForm = z.infer<typeof createSchema>;
@@ -54,11 +66,22 @@ const labelStyle: React.CSSProperties = {
 export default function CreatePage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [aiSuggestion, setAiSuggestion] = useState<{ suggestedPrice: number; action: string; reasoning: string } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [markdownMode, setMarkdownMode] = useState(false);
+  const [tags, setTags] = useState("");
+  const [publishMode, setPublishMode] = useState<"now" | "draft" | "schedule">("now");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [country, setCountry] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastAutosave, setLastAutosave] = useState<Date | null>(null);
+
+  const AUTOSAVE_KEY = "create-draft";
 
   const { data: categories } = useListCategories();
-  const createContent = useCreateContent();
+  const [submitError, setSubmitError] = useState(false);
   const requestAiSuggestion = useRequestAiSuggestion();
 
   const form = useForm<CreateForm>({
@@ -69,12 +92,35 @@ export default function CreatePage() {
       categorySlug: "",
       body: "",
       previewText: "",
+      coverImageUrl: "",
       price: 0.05,
       published: true,
     },
   });
 
   const contentType = form.watch("type");
+  const title = form.watch("title");
+  const body = form.watch("body");
+
+  useEffect(() => {
+    const saved = localStorage.getItem(AUTOSAVE_KEY);
+    if (saved) {
+      try {
+        const d = JSON.parse(saved);
+        if (d.title) form.setValue("title", d.title);
+        if (d.body) form.setValue("body", d.body);
+        if (d.tags) setTags(d.tags);
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ title, body, tags, savedAt: Date.now() }));
+      setLastAutosave(new Date());
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, [title, body, tags]);
 
   const handleGetAiSuggestion = async () => {
     setAiLoading(true);
@@ -90,9 +136,28 @@ export default function CreatePage() {
   };
 
   const onSubmit = async (data: CreateForm) => {
-    const result = await createContent.mutateAsync({ data });
-    queryClient.invalidateQueries({ queryKey: getListContentQueryKey() });
-    setLocation(`/content/${result.id}`);
+    setIsSubmitting(true);
+    setSubmitError(false);
+    try {
+      const status = publishMode === "draft" ? "draft" : publishMode === "schedule" ? "scheduled" : "published";
+      const result = await createContentExtended({
+        ...data,
+        tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+        status,
+        published: status === "published",
+        scheduledAt: publishMode === "schedule" && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        country: country || undefined,
+        metaDescription: metaDescription || undefined,
+      }) as { id: number };
+      localStorage.removeItem(AUTOSAVE_KEY);
+      queryClient.invalidateQueries({ queryKey: getListContentQueryKey() });
+      if (status === "draft") setLocation("/dashboard/creator");
+      else setLocation(`/content/${result.id}`);
+    } catch {
+      setSubmitError(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -112,11 +177,14 @@ export default function CreatePage() {
               lineHeight: 1.2,
             }}
           >
-            Publish Your Work
+            {t("create.title")}
           </h1>
           <p style={{ fontSize: "0.875rem", color: "#78716C", marginTop: "6px" }}>
             Keep 95% of every payment. No gatekeeping — publish freely.
           </p>
+          {lastAutosave && (
+            <p className="text-xs mt-1" style={{ color: "#A8A29E" }}>Draft autosaved {lastAutosave.toLocaleTimeString()}</p>
+          )}
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" data-testid="form-create-content">
@@ -183,19 +251,99 @@ export default function CreatePage() {
             )}
           </div>
 
+          {/* Cover image */}
+          <FileUploadField
+            label="Cover image"
+            hint="Shown on feed cards, homepage carousels, and your content page."
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            value={form.watch("coverImageUrl")}
+            onChange={url => form.setValue("coverImageUrl", url, { shouldValidate: true })}
+            preview="image"
+            required
+            testId="input-cover-image"
+          />
+          {form.formState.errors.coverImageUrl && (
+            <p className="text-red-600 text-xs mt-1">{form.formState.errors.coverImageUrl.message}</p>
+          )}
+
+          {/* AI assistant */}
+          <AiWritingPanel
+            title={title}
+            body={body ?? ""}
+            category={form.watch("categorySlug")}
+            tags={tags}
+            onTitle={(t) => form.setValue("title", t)}
+            onBody={(b) => form.setValue("body", b)}
+            onTags={setTags}
+            onMeta={setMetaDescription}
+          />
+
+          {/* Tags */}
+          <div>
+            <label style={labelStyle}>Tags</label>
+            <input value={tags} onChange={e => setTags(e.target.value)} placeholder="AI, Africa, Architecture (comma-separated)" style={inputStyle} />
+          </div>
+
+          {/* Country (regional discovery) */}
+          <div>
+            <label style={labelStyle}>Country / Region (optional)</label>
+            <input value={country} onChange={e => setCountry(e.target.value)} placeholder="Nigeria, Kenya, South Africa…" style={inputStyle} />
+          </div>
+
+          {/* SEO */}
+          <div>
+            <label style={labelStyle}>SEO meta description (optional)</label>
+            <textarea value={metaDescription} onChange={e => setMetaDescription(e.target.value)} rows={2} style={{ ...inputStyle, resize: "none" }} placeholder="Shown in search results and social previews" />
+          </div>
+
+          {/* Publish mode */}
+          <div>
+            <label style={labelStyle}>When to publish</label>
+            <div className="flex gap-2 flex-wrap">
+              {(["now", "draft", "schedule"] as const).map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setPublishMode(mode)}
+                  className="px-4 py-2 text-sm"
+                  style={{
+                    background: publishMode === mode ? "#1C1917" : "#FFFFFF",
+                    color: publishMode === mode ? "#FAF7F2" : "#78716C",
+                    border: `1px solid ${publishMode === mode ? "#1C1917" : "rgba(28,25,23,0.18)"}`,
+                    borderRadius: "2px",
+                  }}
+                >
+                  {mode === "now" ? "Publish now" : mode === "draft" ? "Save draft" : "Schedule"}
+                </button>
+              ))}
+            </div>
+            {publishMode === "schedule" && (
+              <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} className="mt-3 w-full" style={inputStyle} />
+            )}
+          </div>
+
           {/* Article body */}
           {contentType === "article" && (
             <>
               <div>
-                <label style={labelStyle}>Article body</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Article body</label>
+                  <button type="button" onClick={() => setMarkdownMode(v => !v)} className="text-xs px-2 py-1" style={{ border: "1px solid rgba(28,25,23,0.15)", color: "#78716C", borderRadius: "2px" }}>
+                    {markdownMode ? "Rich text" : "Markdown"}
+                  </button>
+                </div>
                 <p style={{ fontSize: "11px", color: "#78716C", marginBottom: "8px", fontFamily: "sans-serif" }}>
-                  Paste from Word, Google Docs, or any source — formatting is preserved.
+                  Paste from Word, Google Docs, or write in Markdown.
                 </p>
+                {markdownMode ? (
+                  <MarkdownEditor value={form.watch("body") ?? ""} onChange={(v) => form.setValue("body", v)} />
+                ) : (
                 <TipTapEditor
                   value={form.watch("body") ?? ""}
                   onChange={(html) => form.setValue("body", html)}
                   placeholder="Write or paste your article here…"
                 />
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Preview teaser</label>
@@ -216,31 +364,39 @@ export default function CreatePage() {
           )}
 
           {contentType === "audio" && (
-            <div>
-              <label style={labelStyle}>Audio URL</label>
-              <input
-                {...form.register("audioUrl")}
-                placeholder="https://…"
-                data-testid="input-audio-url"
-                style={inputStyle}
-                onFocus={e => (e.currentTarget.style.borderColor = "#C8960C")}
-                onBlur={e => (e.currentTarget.style.borderColor = "rgba(28,25,23,0.18)")}
+            <>
+              <FileUploadField
+                label="Audio file"
+                hint="MP3, WAV, OGG, or other supported audio from your computer."
+                accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/webm"
+                value={form.watch("audioUrl") ?? ""}
+                onChange={url => form.setValue("audioUrl", url, { shouldValidate: true })}
+                preview="audio"
+                required
+                testId="input-audio-file"
               />
-            </div>
+              {form.formState.errors.audioUrl && (
+                <p className="text-red-600 text-xs mt-1">{form.formState.errors.audioUrl.message}</p>
+              )}
+            </>
           )}
 
           {contentType === "video" && (
-            <div>
-              <label style={labelStyle}>Video URL (YouTube embed URL)</label>
-              <input
-                {...form.register("videoUrl")}
-                placeholder="https://www.youtube.com/embed/…"
-                data-testid="input-video-url"
-                style={inputStyle}
-                onFocus={e => (e.currentTarget.style.borderColor = "#C8960C")}
-                onBlur={e => (e.currentTarget.style.borderColor = "rgba(28,25,23,0.18)")}
+            <>
+              <FileUploadField
+                label="Video file"
+                hint="MP4 or WebM from your computer (max 50MB)."
+                accept="video/mp4,video/webm,video/quicktime"
+                value={form.watch("videoUrl") ?? ""}
+                onChange={url => form.setValue("videoUrl", url, { shouldValidate: true })}
+                preview="video"
+                required
+                testId="input-video-file"
               />
-            </div>
+              {form.formState.errors.videoUrl && (
+                <p className="text-red-600 text-xs mt-1">{form.formState.errors.videoUrl.message}</p>
+              )}
+            </>
           )}
 
           {/* Pricing */}
@@ -354,7 +510,7 @@ export default function CreatePage() {
           <div>
             <button
               type="submit"
-              disabled={createContent.isPending}
+              disabled={isSubmitting}
               data-testid="button-publish"
               className="w-full py-3 font-semibold text-sm transition-all disabled:opacity-60"
               style={{
@@ -365,9 +521,15 @@ export default function CreatePage() {
                 letterSpacing: "0.04em",
               }}
             >
-              {createContent.isPending ? "Publishing…" : "Publish piece"}
+              {isSubmitting
+                ? "Saving…"
+                : publishMode === "draft"
+                  ? t("create.draft")
+                  : publishMode === "schedule"
+                    ? "Schedule piece"
+                    : t("create.publish")}
             </button>
-            {createContent.isError && (
+            {submitError && (
               <p className="text-red-600 text-sm text-center mt-3">Failed to publish. Please try again.</p>
             )}
           </div>

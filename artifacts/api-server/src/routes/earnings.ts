@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { eq, sql, desc } from "drizzle-orm";
-import { db, contentTable, paymentsTable, aiSuggestionsTable } from "@workspace/db";
+import { db, contentTable, paymentsTable, aiSuggestionsTable, tipsTable } from "@workspace/db";
 import { clerkClient } from "@clerk/express";
+import { getSettlementRailInfo } from "../lib/settlementRail";
+import { tryCompleteCreatorPendingSplits, isPendingPayment } from "../lib/recordPayment";
 
 const router = Router();
 
@@ -16,11 +18,21 @@ router.get("/summary", async (req, res): Promise<void> => {
     .from(paymentsTable)
     .where(eq(paymentsTable.creatorId, userId));
 
+  const [tipStats] = await db
+    .select({ total: sql<string>`coalesce(sum(${tipsTable.creatorAmount}), 0)`, tips: sql<number>`count(*)` })
+    .from(tipsTable)
+    .where(eq(tipsTable.toCreatorId, userId));
+
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const [thisWeek] = await db
     .select({ total: sql<string>`coalesce(sum(${paymentsTable.creatorAmount}), 0)` })
     .from(paymentsTable)
     .where(sql`${paymentsTable.creatorId} = ${userId} and ${paymentsTable.paidAt} >= ${oneWeekAgo}`);
+
+  const [tipsThisWeek] = await db
+    .select({ total: sql<string>`coalesce(sum(${tipsTable.creatorAmount}), 0)` })
+    .from(tipsTable)
+    .where(sql`${tipsTable.toCreatorId} = ${userId} and ${tipsTable.createdAt} >= ${oneWeekAgo}`);
 
   // Conversion rate across all content
   const [viewData] = await db
@@ -33,9 +45,10 @@ router.get("/summary", async (req, res): Promise<void> => {
     : 0;
 
   res.json({
-    totalEarnedAllTime: Number(allTime?.total ?? 0),
-    thisWeekEarnings: Number(thisWeek?.total ?? 0),
+    totalEarnedAllTime: Number(allTime?.total ?? 0) + Number(tipStats?.total ?? 0),
+    thisWeekEarnings: Number(thisWeek?.total ?? 0) + Number(tipsThisWeek?.total ?? 0),
     totalPurchases: Number(allTime?.purchases ?? 0),
+    totalTips: Number(tipStats?.tips ?? 0),
     conversionRate: convRate,
   });
 });
@@ -95,10 +108,37 @@ router.get("/content", async (req, res): Promise<void> => {
   res.json(result);
 });
 
+// GET /api/earnings/settlement — creator settlement status on Arc
+router.get("/settlement", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const rail = getSettlementRailInfo();
+  const rows = await db
+    .select({
+      splitTxHash: paymentsTable.splitTxHash,
+      txHash: paymentsTable.txHash,
+    })
+    .from(paymentsTable)
+    .where(eq(paymentsTable.creatorId, userId));
+
+  const settled = rows.filter((r) => !!r.splitTxHash).length;
+  const pending = rows.filter((r) => isPendingPayment(r)).length;
+
+  res.json({
+    ...rail,
+    salesSettledOnChain: settled,
+    salesPendingSplit: pending,
+    totalSales: rows.length,
+  });
+});
+
 // GET /api/earnings/recent
 router.get("/recent", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  await tryCompleteCreatorPendingSplits(userId);
 
   const limit = parseInt(req.query.limit as string) || 20;
 
@@ -107,8 +147,11 @@ router.get("/recent", async (req, res): Promise<void> => {
       id: paymentsTable.id,
       contentId: paymentsTable.contentId,
       readerId: paymentsTable.readerId,
+      amount: paymentsTable.amount,
       creatorAmount: paymentsTable.creatorAmount,
       paidAt: paymentsTable.paidAt,
+      txHash: paymentsTable.txHash,
+      splitTxHash: paymentsTable.splitTxHash,
       contentTitle: contentTable.title,
     })
     .from(paymentsTable)
@@ -133,8 +176,12 @@ router.get("/recent", async (req, res): Promise<void> => {
     contentId: r.contentId,
     contentTitle: r.contentTitle ?? "Untitled",
     readerName: nameMap[r.readerId] ?? "Reader",
+    amount: Number(r.amount),
     creatorAmount: Number(r.creatorAmount),
     paidAt: r.paidAt.toISOString(),
+    txHash: r.txHash,
+    splitTxHash: r.splitTxHash,
+    settlementStatus: r.splitTxHash ? "settled" : isPendingPayment(r) ? "pending" : "recorded",
   })));
 });
 

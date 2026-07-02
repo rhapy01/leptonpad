@@ -11,6 +11,8 @@ export const paymentsTable = pgTable("payments", {
   creatorAmount: numeric("creator_amount", { precision: 18, scale: 8 }).notNull(),
   platformAmount: numeric("platform_amount", { precision: 18, scale: 8 }).notNull(),
   txHash: text("tx_hash"),
+  /** On-chain LeptonSplit tx — atomic creator/platform disbursement */
+  splitTxHash: text("split_tx_hash"),
   paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

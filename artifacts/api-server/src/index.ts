@@ -1,5 +1,7 @@
+import "./loadEnv";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { validateSettlementConfig } from "./lib/settlementConfig";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +24,12 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  void validateSettlementConfig();
+  void import("./lib/blobStorage").then(({ blobStorageEnabled, getBlobStoreId }) => {
+    if (blobStorageEnabled()) {
+      logger.info({ storeId: getBlobStoreId() ?? "unknown" }, "Media uploads: Vercel Blob");
+    } else {
+      logger.info("Media uploads: local disk (set BLOB_READ_WRITE_TOKEN for Vercel Blob)");
+    }
+  });
 });

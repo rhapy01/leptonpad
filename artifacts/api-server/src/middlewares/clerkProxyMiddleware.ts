@@ -11,7 +11,7 @@
  * dashboard — all auth configuration is done through the Auth pane.
  *
  * IMPORTANT:
- * - Only active in production (Clerk proxying doesn't work for dev instances)
+ * - Only active in production (Clerk proxying doesn't work for dev instances on localhost)
  * - Must be mounted BEFORE express.json() middleware
  *
  * Usage in app.ts:

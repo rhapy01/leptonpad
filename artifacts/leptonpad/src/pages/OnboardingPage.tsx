@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useListCategories, useUpdateMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { FocusPageLayout } from "@/components/FocusPageLayout";
 
 const CATEGORY_ICONS: Record<string, string> = {
   "crypto-web3": "₿",
@@ -31,28 +32,39 @@ export default function OnboardingPage() {
     setLocation("/feed");
   };
 
+  const handleSkip = async () => {
+    await updateMe.mutateAsync({ data: { onboardingComplete: true } });
+    queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+    setLocation("/feed");
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0D0F14" }}>
-        <div className="w-8 h-8 border-2 border-[#F5C842] border-t-transparent rounded-full animate-spin" />
-      </div>
+      <FocusPageLayout wide backHref="/feed" backLabel="← Skip to feed">
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "#1C1917", borderTopColor: "transparent" }} />
+        </div>
+      </FocusPageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16" style={{ background: "#0D0F14" }}>
-      <div className="max-w-2xl w-full">
+    <FocusPageLayout wide backHref="/feed" backLabel="← Skip to feed">
+    <div className="w-full">
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <div className="w-12 h-12 rounded-full border border-[#F5C842]/60 flex items-center justify-center">
-              <span className="font-serif text-[#F5C842] text-xl font-bold" style={{ fontFamily: "Georgia, serif" }}>λ</span>
+            <div className="w-12 h-12 rounded-full border flex items-center justify-center" style={{ borderColor: "rgba(28,25,23,0.3)" }}>
+              <span className="text-xl font-bold" style={{ fontFamily: "Georgia, serif", color: "#1C1917" }}>λ</span>
             </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold text-[#E8EAF0] mb-3 leading-tight">
-            What do you want to see on LeptonPad?
+          <h1
+            className="mb-3 text-3xl font-semibold leading-tight sm:text-4xl"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1C1917" }}
+          >
+            Personalize your feed
           </h1>
-          <p className="text-[#6B7280] text-base">
-            Select the categories you care about. Your feed shows only what you choose.
+          <p className="text-base" style={{ color: "#78716C" }}>
+            Optional — pick categories you care about, or skip and browse everything.
           </p>
         </div>
 
@@ -66,8 +78,8 @@ export default function OnboardingPage() {
                 data-testid={`tile-category-${cat.slug}`}
                 className="relative p-5 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer"
                 style={{
-                  background: isSelected ? "rgba(245,200,66,0.06)" : "#161820",
-                  borderColor: isSelected ? "#F5C842" : "rgba(255,255,255,0.08)",
+                  background: isSelected ? "rgba(28,25,23,0.04)" : "#FFFFFF",
+                  borderColor: isSelected ? "#1C1917" : "rgba(28,25,23,0.12)",
                   animationDelay: `${i * 60}ms`,
                   animation: "cardEntrance 0.4s ease forwards",
                 }}
@@ -77,16 +89,16 @@ export default function OnboardingPage() {
                     {CATEGORY_ICONS[cat.slug] ?? "◆"}
                   </span>
                   <div>
-                    <p className={`font-semibold mb-1 transition-colors ${isSelected ? "text-[#F5C842]" : "text-[#E8EAF0]"}`}>
+                    <p className={`font-semibold mb-1 transition-colors ${isSelected ? "text-[#1C1917]" : "text-[#1C1917]"}`}>
                       {cat.name}
                     </p>
-                    <p className="text-sm text-[#6B7280]">{cat.description}</p>
+                    <p className="text-sm" style={{ color: "#78716C" }}>{cat.description}</p>
                   </div>
                 </div>
                 {isSelected && (
-                  <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#F5C842] flex items-center justify-center">
+                  <div className="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full" style={{ background: "#1C1917" }}>
                     <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path d="M1 4L3.5 6.5L9 1" stroke="#0D0F14" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M1 4L3.5 6.5L9 1" stroke="#FAF7F2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
                 )}
@@ -95,21 +107,31 @@ export default function OnboardingPage() {
           })}
         </div>
 
-        <div className="text-center">
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <button
             onClick={handleContinue}
             disabled={selected.length === 0 || updateMe.isPending}
             data-testid="button-continue-onboarding"
-            className="px-10 py-3.5 rounded-lg font-semibold text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-10 py-3.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40"
             style={{
-              background: selected.length > 0 ? "#F5C842" : "#2A2C35",
-              color: selected.length > 0 ? "#0D0F14" : "#6B7280",
+              background: selected.length > 0 ? "#1C1917" : "rgba(28,25,23,0.08)",
+              color: selected.length > 0 ? "#FAF7F2" : "#78716C",
+              borderRadius: "2px",
             }}
           >
-            {updateMe.isPending ? "Saving..." : `Continue${selected.length > 0 ? ` (${selected.length} selected)` : ""}`}
+            {updateMe.isPending ? "Saving..." : `Save preferences${selected.length > 0 ? ` (${selected.length})` : ""}`}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSkip()}
+            disabled={updateMe.isPending}
+            className="px-6 py-3.5 text-sm font-medium"
+            style={{ color: "#78716C" }}
+          >
+            Skip for now
           </button>
         </div>
-      </div>
     </div>
+    </FocusPageLayout>
   );
 }

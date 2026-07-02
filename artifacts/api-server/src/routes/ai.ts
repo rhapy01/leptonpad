@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { db, contentTable, paymentsTable, aiSuggestionsTable } from "@workspace/db";
+import { suggestTitles, optimizeSeo, improveWriting, suggestTags, isLlmConfigured } from "../lib/llm";
 
 const router = Router();
 
@@ -215,6 +216,111 @@ router.post("/suggestions/:id/dismiss", async (req, res): Promise<void> => {
 
   await db.update(aiSuggestionsTable).set({ status: "dismissed" }).where(eq(aiSuggestionsTable.id, id));
   res.json({ success: true });
+});
+
+// POST /api/ai/auto-review — agentically review all creator content and surface pricing suggestions
+router.post("/auto-review", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const pieces = await db
+    .select()
+    .from(contentTable)
+    .where(eq(contentTable.creatorId, userId));
+
+  const created: number[] = [];
+
+  for (const content of pieces) {
+    const currentPrice = Number(content.price);
+    const conversionRate = content.viewCount > 0
+      ? (content.purchaseCount / content.viewCount) * 100
+      : 0;
+
+    if (content.viewCount < 10) continue;
+
+    const suggestion = generatePricingSuggestion(
+      currentPrice,
+      conversionRate,
+      content.viewCount,
+      content.purchaseCount,
+      content.type,
+    );
+
+    if (suggestion.action === "keep" && content.viewCount < 50) continue;
+
+    const pending = await db
+      .select({ id: aiSuggestionsTable.id })
+      .from(aiSuggestionsTable)
+      .where(and(
+        eq(aiSuggestionsTable.contentId, content.id),
+        eq(aiSuggestionsTable.creatorId, userId),
+        sql`${aiSuggestionsTable.status} = 'pending'`,
+      ))
+      .limit(1);
+
+    if (pending.length > 0) continue;
+
+    await db.update(aiSuggestionsTable)
+      .set({ status: "dismissed" })
+      .where(and(
+        eq(aiSuggestionsTable.contentId, content.id),
+        eq(aiSuggestionsTable.creatorId, userId),
+        sql`${aiSuggestionsTable.status} = 'pending'`,
+      ));
+
+    const [row] = await db.insert(aiSuggestionsTable).values({
+      contentId: content.id,
+      creatorId: userId,
+      currentPrice: String(currentPrice),
+      suggestedPrice: String(suggestion.suggestedPrice),
+      action: suggestion.action,
+      reasoning: suggestion.reasoning,
+      conversionRate: String(conversionRate.toFixed(2)),
+      status: "pending",
+    }).returning();
+
+    created.push(row.id);
+  }
+
+  res.json({ reviewed: pieces.length, suggestionsCreated: created.length, suggestionIds: created });
+});
+
+// ─── LLM writing & SEO assistance ───────────────────────────────────────────
+
+router.post("/llm/titles", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { body, category } = req.body as { body?: string; category?: string };
+  if (!body) { res.status(400).json({ error: "body required" }); return; }
+  const titles = await suggestTitles(body, category);
+  res.json({ titles, llm: isLlmConfigured() });
+});
+
+router.post("/llm/seo", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { title, body, tags } = req.body as { title?: string; body?: string; tags?: string[] };
+  if (!title || !body) { res.status(400).json({ error: "title and body required" }); return; }
+  const result = await optimizeSeo({ title, body, tags });
+  res.json({ ...result, llm: isLlmConfigured() });
+});
+
+router.post("/llm/improve", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { text, mode } = req.body as { text?: string; mode?: "grammar" | "expand" | "summarize" };
+  if (!text) { res.status(400).json({ error: "text required" }); return; }
+  const improved = await improveWriting(text, mode ?? "grammar");
+  res.json({ text: improved, llm: isLlmConfigured() });
+});
+
+router.post("/llm/tags", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { title, body } = req.body as { title?: string; body?: string };
+  if (!title) { res.status(400).json({ error: "title required" }); return; }
+  const tags = await suggestTags(title, body ?? "");
+  res.json({ tags, llm: isLlmConfigured() });
 });
 
 export default router;

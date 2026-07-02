@@ -3,7 +3,29 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
-import { useEffect } from "react";
+import { Node, mergeAttributes } from "@tiptap/core";
+import { useEffect, useRef } from "react";
+import { uploadMedia } from "@/lib/platformApi";
+import { sanitizePastedHtml } from "@/lib/sanitizeWordHtml";
+import { useToast } from "@/hooks/use-toast";
+
+const UploadedImage = Node.create({
+  name: "image",
+  group: "block",
+  atom: true,
+  addAttributes() {
+    return {
+      src: { default: null },
+      alt: { default: null },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "img[src]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["img", mergeAttributes(HTMLAttributes, { style: "max-width:100%;height:auto;border-radius:4px" })];
+  },
+});
 
 interface TipTapEditorProps {
   value: string;
@@ -41,6 +63,9 @@ function ToolbarButton({
 }
 
 export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps) {
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -53,6 +78,7 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
         horizontalRule: {},
       }),
       Underline,
+      UploadedImage,
       Placeholder.configure({
         placeholder: placeholder ?? "Write your article here… Paste from Word, Google Docs, or any source.",
         emptyEditorClass: "is-editor-empty",
@@ -68,6 +94,9 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
         class: "tiptap-editor-content",
         "data-testid": "tiptap-editor",
       },
+      transformPastedHTML(html) {
+        return sanitizePastedHtml(html);
+      },
     },
   });
 
@@ -78,6 +107,16 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
   }, [value, editor]);
 
   if (!editor) return null;
+
+  const insertImage = async (file: File) => {
+    try {
+      const { url } = await uploadMedia(file);
+      editor.chain().focus().insertContent({ type: "image", attrs: { src: url, alt: file.name } }).run();
+      toast({ title: "Image inserted" });
+    } catch (e) {
+      toast({ title: "Upload failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+    }
+  };
 
   return (
     <div
@@ -91,7 +130,7 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
       {/* Toolbar */}
       <div
         className="flex flex-wrap items-center gap-0.5 px-3 py-2"
-        style={{ borderBottom: "1px solid rgba(28,25,23,0.1)", background: "#FAF7F2" }}
+        style={{ borderBottom: "1px solid rgba(28,25,23,0.1)", background: "#ffffff" }}
       >
         <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Bold">
           <strong>B</strong>
@@ -128,6 +167,23 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
         </ToolbarButton>
         <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Divider">
           —
+        </ToolbarButton>
+
+        <span style={{ width: "1px", height: "16px", background: "rgba(28,25,23,0.12)", margin: "0 4px" }} />
+
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={e => {
+            const f = e.target.files?.[0];
+            if (f) void insertImage(f);
+            e.target.value = "";
+          }}
+        />
+        <ToolbarButton onClick={() => imageInputRef.current?.click()} title="Insert image">
+          🖼
         </ToolbarButton>
 
         <span style={{ width: "1px", height: "16px", background: "rgba(28,25,23,0.12)", margin: "0 4px" }} />

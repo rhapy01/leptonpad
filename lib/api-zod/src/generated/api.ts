@@ -124,6 +124,7 @@ export const ListContentQueryParams = zod.object({
   "categories": zod.coerce.string().optional().describe('Comma-separated category slugs to filter by'),
   "type": zod.enum(['article', 'audio', 'video']).optional().describe('Filter by content type'),
   "creatorId": zod.coerce.string().optional().describe('Filter by creator Clerk user ID'),
+  "q": zod.coerce.string().optional().describe('Search titles, previews, and creator names'),
   "limit": zod.coerce.number().default(listContentQueryLimitDefault),
   "offset": zod.coerce.number().default(listContentQueryOffsetDefault)
 })
@@ -141,6 +142,7 @@ export const ListContentResponse = zod.object({
   "creatorImageUrl": zod.string().nullable(),
   "creatorVerified": zod.boolean(),
   "previewText": zod.string().nullable(),
+  "coverImageUrl": zod.string().nullable(),
   "audioUrl": zod.string().nullable(),
   "videoUrl": zod.string().nullable(),
   "viewCount": zod.number(),
@@ -168,6 +170,7 @@ export const CreateContentBody = zod.object({
   "categorySlug": zod.string(),
   "body": zod.string().optional(),
   "previewText": zod.string().optional(),
+  "coverImageUrl": zod.string().min(1),
   "audioUrl": zod.string().optional(),
   "videoUrl": zod.string().optional(),
   "price": zod.number().min(createContentBodyPriceMin),
@@ -194,6 +197,7 @@ export const GetContentResponse = zod.object({
   "creatorImageUrl": zod.string().nullable(),
   "body": zod.string().nullable(),
   "previewText": zod.string().nullable(),
+  "coverImageUrl": zod.string().nullable(),
   "audioUrl": zod.string().nullable(),
   "videoUrl": zod.string().nullable(),
   "viewCount": zod.number(),
@@ -221,6 +225,7 @@ export const UpdateContentBody = zod.object({
   "title": zod.string().optional(),
   "body": zod.string().optional(),
   "previewText": zod.string().optional(),
+  "coverImageUrl": zod.string().min(1).optional(),
   "audioUrl": zod.string().optional(),
   "videoUrl": zod.string().optional(),
   "price": zod.number().min(updateContentBodyPriceMin).optional(),
@@ -239,6 +244,7 @@ export const UpdateContentResponse = zod.object({
   "creatorImageUrl": zod.string().nullable(),
   "creatorVerified": zod.boolean(),
   "previewText": zod.string().nullable(),
+  "coverImageUrl": zod.string().nullable(),
   "audioUrl": zod.string().nullable(),
   "videoUrl": zod.string().nullable(),
   "viewCount": zod.number(),
@@ -275,6 +281,7 @@ export const GetNextContentResponse = zod.object({
   "creatorImageUrl": zod.string().nullable(),
   "creatorVerified": zod.boolean(),
   "previewText": zod.string().nullable(),
+  "coverImageUrl": zod.string().nullable(),
   "audioUrl": zod.string().nullable(),
   "videoUrl": zod.string().nullable(),
   "viewCount": zod.number(),
@@ -289,6 +296,39 @@ export const GetNextContentResponse = zod.object({
  */
 export const TrackContentViewParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get Circle Gateway / x402 payment configuration
+ */
+export const GetPaymentConfigResponse = zod.object({
+  "enabled": zod.boolean(),
+  "mockMode": zod.boolean(),
+  "chainId": zod.number(),
+  "network": zod.string(),
+  "chainName": zod.string(),
+  "facilitatorUrl": zod.string(),
+  "sellerAddress": zod.string().nullable(),
+  "minPrice": zod.number(),
+  "creatorShare": zod.number()
+})
+
+
+/**
+ * @summary Unlock content via x402 Gateway nanopayment
+ */
+export const PayGatewayUnlockParams = zod.object({
+  "contentId": zod.coerce.number()
+})
+
+export const PayGatewayUnlockResponse = zod.object({
+  "success": zod.boolean(),
+  "paymentId": zod.number(),
+  "contentId": zod.number(),
+  "amountPaid": zod.number(),
+  "creatorReceives": zod.number(),
+  "settledAt": zod.string()
 })
 
 
@@ -432,6 +472,7 @@ export const ApplyAiSuggestionResponse = zod.object({
   "creatorImageUrl": zod.string().nullable(),
   "creatorVerified": zod.boolean(),
   "previewText": zod.string().nullable(),
+  "coverImageUrl": zod.string().nullable(),
   "audioUrl": zod.string().nullable(),
   "videoUrl": zod.string().nullable(),
   "viewCount": zod.number(),

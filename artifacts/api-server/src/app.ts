@@ -1,6 +1,8 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import { join } from "node:path";
+import { existsSync } from "node:fs";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
 import router from "./routes";
@@ -49,5 +51,18 @@ app.use(
 );
 
 app.use("/api", router);
+
+const uploadDir = process.env.UPLOAD_DIR ?? join(process.cwd(), "uploads");
+if (existsSync(uploadDir)) {
+  app.use("/api/uploads/files", express.static(uploadDir, { maxAge: "7d" }));
+}
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const message = err instanceof Error ? err.message : "Internal server error";
+  logger.error({ err }, "Unhandled API error");
+  if (!res.headersSent) {
+    res.status(500).json({ error: message });
+  }
+});
 
 export default app;

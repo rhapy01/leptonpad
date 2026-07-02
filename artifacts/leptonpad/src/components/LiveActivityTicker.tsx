@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { CreatorName } from "@/components/CreatorName";
 
 interface ActivityEvent {
   contentTitle: string;
   amount: number;
   creatorName: string;
+  creatorVerified?: boolean;
   secondsAgo: number;
 }
 
@@ -68,9 +70,13 @@ export function LiveActivityTicker() {
               className="ticker-item flex items-center gap-2 px-5 whitespace-nowrap"
             >
               <span className="text-[#78716C] text-[11px]">↗</span>
-              <span className="text-[11px] text-[#FAF7F2]/80 font-medium">
-                {ev.creatorName}
-              </span>
+              <CreatorName
+                name={ev.creatorName}
+                verified={ev.creatorVerified}
+                dark
+                size="sm"
+                className="text-[11px] text-[#FAF7F2]/80 font-medium"
+              />
               <span className="text-[#78716C] text-[11px]">·</span>
               <span className="text-[11px] text-[#FAF7F2]/60 max-w-[180px] truncate inline-block">
                 {ev.contentTitle.length > 40 ? ev.contentTitle.slice(0, 38) + "…" : ev.contentTitle}

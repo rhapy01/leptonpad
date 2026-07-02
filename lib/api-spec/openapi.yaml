@@ -158,6 +158,11 @@ paths:
           schema:
             type: string
           description: Filter by creator Clerk user ID
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search titles, previews, and creator names
         - name: limit
           in: query
           schema:
@@ -297,6 +302,42 @@ paths:
       responses:
         "204":
           description: View tracked
+
+  /payments/config:
+    get:
+      operationId: getPaymentConfig
+      tags: [payments]
+      summary: Get Circle Gateway / x402 payment configuration
+      responses:
+        "200":
+          description: Payment rail config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentConfig"
+
+  /payments/gateway/{contentId}:
+    get:
+      operationId: payGatewayUnlock
+      tags: [payments]
+      summary: Unlock content via x402 Gateway nanopayment
+      parameters:
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Unlock result after verified payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnlockResult"
+        "402":
+          description: Payment required — x402 PAYMENT-REQUIRED header included
+        "401":
+          description: Unauthorized
 
   /payments/unlock:
     post:
@@ -596,6 +637,8 @@ components:
           type: boolean
         previewText:
           type: ["string", "null"]
+        coverImageUrl:
+          type: ["string", "null"]
         audioUrl:
           type: ["string", "null"]
         videoUrl:
@@ -620,6 +663,7 @@ components:
         - creatorImageUrl
         - creatorVerified
         - previewText
+        - coverImageUrl
         - audioUrl
         - videoUrl
         - viewCount
@@ -653,6 +697,8 @@ components:
           type: ["string", "null"]
         previewText:
           type: ["string", "null"]
+        coverImageUrl:
+          type: ["string", "null"]
         audioUrl:
           type: ["string", "null"]
         videoUrl:
@@ -684,6 +730,7 @@ components:
         - creatorVerified
         - body
         - previewText
+        - coverImageUrl
         - audioUrl
         - videoUrl
         - viewCount
@@ -708,6 +755,9 @@ components:
           type: string
         previewText:
           type: string
+        coverImageUrl:
+          type: string
+          description: Uploaded file path or absolute URL
         audioUrl:
           type: string
         videoUrl:
@@ -722,6 +772,7 @@ components:
         - type
         - categorySlug
         - price
+        - coverImageUrl
 
     ContentUpdate:
       type: object
@@ -732,6 +783,9 @@ components:
           type: string
         previewText:
           type: string
+        coverImageUrl:
+          type: string
+          description: Uploaded file path or absolute URL
         audioUrl:
           type: string
         videoUrl:
@@ -804,6 +858,38 @@ components:
       required:
         - hasAccess
         - paymentId
+
+    PaymentConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        mockMode:
+          type: boolean
+        chainId:
+          type: integer
+        network:
+          type: string
+        chainName:
+          type: string
+        facilitatorUrl:
+          type: string
+        sellerAddress:
+          type: ["string", "null"]
+        minPrice:
+          type: number
+        creatorShare:
+          type: number
+      required:
+        - enabled
+        - mockMode
+        - chainId
+        - network
+        - chainName
+        - facilitatorUrl
+        - sellerAddress
+        - minPrice
+        - creatorShare
 
     Purchase:
       type: object

@@ -12,12 +12,16 @@ export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+    <ToastProvider swipeDirection="right">
+      {toasts.map(function ({ id, title, description, action, variant, ...props }) {
+        const displayTitle =
+          variant === "success" && typeof title === "string" && !title.startsWith("✓")
+            ? `✓ ${title}`
+            : title
         return (
-          <Toast key={id} {...props}>
+          <Toast key={id} variant={variant} {...props}>
             <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
+              {displayTitle && <ToastTitle>{displayTitle}</ToastTitle>}
               {description && (
                 <ToastDescription>{description}</ToastDescription>
               )}

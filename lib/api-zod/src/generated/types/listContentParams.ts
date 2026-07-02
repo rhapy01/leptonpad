@@ -20,6 +20,10 @@ type?: ListContentType;
  * Filter by creator Clerk user ID
  */
 creatorId?: string;
+/**
+ * Search titles, previews, and creator names
+ */
+q?: string;
 limit?: number;
 offset?: number;
 };

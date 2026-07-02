@@ -25,6 +25,7 @@ export * from './getRecentPaymentsParams';
 export * from './healthStatus';
 export * from './listContentParams';
 export * from './listContentType';
+export * from './paymentConfig';
 export * from './paymentEvent';
 export * from './platformStats';
 export * from './purchase';

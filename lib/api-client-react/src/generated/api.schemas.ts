@@ -64,6 +64,8 @@ export interface Content {
   /** @nullable */
   previewText: string | null;
   /** @nullable */
+  coverImageUrl: string | null;
+  /** @nullable */
   audioUrl: string | null;
   /** @nullable */
   videoUrl: string | null;
@@ -98,6 +100,8 @@ export interface ContentDetail {
   /** @nullable */
   previewText: string | null;
   /** @nullable */
+  coverImageUrl: string | null;
+  /** @nullable */
   audioUrl: string | null;
   /** @nullable */
   videoUrl: string | null;
@@ -127,6 +131,7 @@ export interface ContentInput {
   categorySlug: string;
   body?: string;
   previewText?: string;
+  coverImageUrl: string;
   audioUrl?: string;
   videoUrl?: string;
   /** @minimum 0 */
@@ -138,6 +143,7 @@ export interface ContentUpdate {
   title?: string;
   body?: string;
   previewText?: string;
+  coverImageUrl?: string;
   audioUrl?: string;
   videoUrl?: string;
   /** @minimum 0 */
@@ -270,6 +276,10 @@ type?: ListContentType;
  * Filter by creator Clerk user ID
  */
 creatorId?: string;
+/**
+ * Search titles, previews, and creator names
+ */
+q?: string;
 limit?: number;
 offset?: number;
 };

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   useGetEarningsSummary,
   useGetEarningsByContent,
@@ -11,7 +12,9 @@ import {
   getListAiSuggestionsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { PlatformLayout } from "@/components/PlatformLayout";
+import { DashboardShell } from "@/components/DashboardShell";
+import { WalletFundsPanel } from "@/components/WalletFundsPanel";
+import { SettlementRailPanel, SettlementStatusBadge } from "@/components/SettlementRailPanel";
 
 export default function EarningsPage() {
   const queryClient = useQueryClient();
@@ -38,6 +41,15 @@ export default function EarningsPage() {
   };
 
   const activeSuggestions = suggestions?.filter(s => s.status === "pending") ?? [];
+
+  // Agent auto-review: scan all published content and surface pricing suggestions
+  useEffect(() => {
+    fetch("/api/ai/auto-review", { method: "POST", credentials: "include" })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: getListAiSuggestionsQueryKey() });
+      })
+      .catch(() => {});
+  }, [queryClient]);
 
   const statCard = (label: string, value: string, sub: string, gold = false) => (
     <div
@@ -66,30 +78,8 @@ export default function EarningsPage() {
   );
 
   return (
-    <PlatformLayout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        {/* Page header */}
-        <div
-          className="py-6"
-          style={{ borderBottom: "1px solid rgba(28,25,23,0.15)" }}
-        >
-          <p className="editorial-label mb-1" style={{ color: "#78716C" }}>Creator dashboard</p>
-          <h1
-            style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: "clamp(1.5rem, 4vw, 2rem)",
-              fontWeight: 700,
-              color: "#1C1917",
-            }}
-          >
-            Earnings
-          </h1>
-          <p style={{ fontSize: "0.8125rem", color: "#78716C", marginTop: "4px" }}>
-            Your content performance and USDC income
-          </p>
-        </div>
-
-        <div className="py-8 space-y-10">
+    <DashboardShell title="Earnings" subtitle="Your content performance and USDC income">
+        <div className="space-y-10">
           {/* Summary cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {summaryLoading
@@ -107,6 +97,10 @@ export default function EarningsPage() {
                 ]
             }
           </div>
+
+          <SettlementRailPanel variant="creator" />
+
+          <WalletFundsPanel variant="embedded" />
 
           {/* Content table + Recent payments side-by-side */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -254,6 +248,10 @@ export default function EarningsPage() {
                           <p style={{ fontSize: "11px", color: "#78716C" }}>
                             {new Date(payment.paidAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </p>
+                          <SettlementStatusBadge
+                            status={(payment as { settlementStatus?: string }).settlementStatus}
+                            splitTxHash={payment.splitTxHash as string | null | undefined}
+                          />
                         </div>
                       </div>
                     ))}
@@ -334,7 +332,6 @@ export default function EarningsPage() {
             </div>
           )}
         </div>
-      </div>
-    </PlatformLayout>
+    </DashboardShell>
   );
 }

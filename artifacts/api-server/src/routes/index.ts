@@ -7,6 +7,18 @@ import paymentsRouter from "./payments";
 import earningsRouter from "./earnings";
 import aiRouter from "./ai";
 import statsRouter from "./stats";
+import adminRouter from "./admin";
+import dashboardRouter from "./dashboard";
+import walletRouter from "./wallet";
+import socialRouter from "./social";
+import creatorsRouter from "./creators";
+import discoveryRouter from "./discovery";
+import seoRouter from "./seo";
+import monetizationRouter from "./monetization";
+import uploadsRouter, { UPLOAD_DIR } from "./uploads";
+import gamificationRouter from "./gamification";
+import awasRouter from "./awas";
+import intelligenceRouter from "./intelligence";
 
 const router: IRouter = Router();
 
@@ -18,5 +30,17 @@ router.use("/payments", paymentsRouter);
 router.use("/earnings", earningsRouter);
 router.use("/ai", aiRouter);
 router.use("/stats", statsRouter);
+router.use("/admin", adminRouter);
+router.use("/dashboard", dashboardRouter);
+router.use("/wallet", walletRouter);
+router.use("/social", socialRouter);
+router.use("/creators", creatorsRouter);
+router.use("/discovery", discoveryRouter);
+router.use("/seo", seoRouter);
+router.use("/intelligence", intelligenceRouter);
+router.use("/monetization", monetizationRouter);
+router.use("/uploads", uploadsRouter);
+router.use("/gamification", gamificationRouter);
+router.use("/awas", awasRouter);
 
 export default router;

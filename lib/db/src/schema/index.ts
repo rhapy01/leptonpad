@@ -3,3 +3,8 @@ export * from "./categories";
 export * from "./content";
 export * from "./payments";
 export * from "./ai_suggestions";
+export * from "./social";
+export * from "./monetization";
+export * from "./gamification";
+export * from "./media";
+export * from "./awas";
