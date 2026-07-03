@@ -68,6 +68,28 @@ export async function ensureFirstDeviceTrusted(clerkId: string, deviceId: string
 }
 
 export async function sendDeviceVerificationEmail(clerkId: string): Promise<{ sent: boolean; error?: string }> {
+  return sendAccountOtpEmail(clerkId, "device", {
+    subject: "LeptonPad — new device verification code",
+    title: "Someone is signing in to your LeptonPad account from a new device.",
+    idempotencyKey: `device-otp:${clerkId}:${Math.floor(Date.now() / 60_000)}`,
+  });
+}
+
+export async function sendWalletPinResetEmail(clerkId: string): Promise<{ sent: boolean; error?: string }> {
+  return sendAccountOtpEmail(clerkId, "wallet_reset", {
+    subject: "LeptonPad — wallet password reset code",
+    title: "You requested to reset your LeptonPad wallet PIN or password.",
+    idempotencyKey: `wallet-reset-otp:${clerkId}:${Math.floor(Date.now() / 60_000)}`,
+  });
+}
+
+type AccountOtpPurpose = "device" | "wallet_reset";
+
+async function sendAccountOtpEmail(
+  clerkId: string,
+  purpose: AccountOtpPurpose,
+  email: { subject: string; title: string; idempotencyKey: string },
+): Promise<{ sent: boolean; error?: string }> {
   const [user] = await db
     .select()
     .from(usersTable)
@@ -80,13 +102,14 @@ export async function sendDeviceVerificationEmail(clerkId: string): Promise<{ se
 
   await db.insert(deviceOtpTable).values({
     clerkId,
+    purpose,
     codeHash: hashOtpCode(code),
     expiresAt,
   });
 
   const html = `
     <p>Hi ${user.name},</p>
-    <p>Someone is signing in to your LeptonPad account from a new device. Your verification code is:</p>
+    <p>${email.title} Your verification code is:</p>
     <p style="font-size:28px;font-weight:700;letter-spacing:4px">${code}</p>
     <p>This code expires in 10 minutes. If this wasn't you, secure your account immediately.</p>
   `;
@@ -94,22 +117,41 @@ export async function sendDeviceVerificationEmail(clerkId: string): Promise<{ se
   const sent = await sendEmail({
     to: user.email,
     recipientName: user.name,
-    subject: "LeptonPad — new device verification code",
+    subject: email.subject,
     html,
-    text: `Your LeptonPad new-device code is ${code}. It expires in 10 minutes.`,
-    idempotencyKey: `device-otp:${clerkId}:${Math.floor(Date.now() / 60_000)}`,
+    text: `Your LeptonPad code is ${code}. It expires in 10 minutes.`,
+    idempotencyKey: email.idempotencyKey,
   });
 
   return { sent, error: sent ? undefined : "Email could not be sent" };
 }
 
-async function consumeEmailOtp(clerkId: string, code: string): Promise<boolean> {
+export async function consumeEmailOtpForPurpose(
+  clerkId: string,
+  code: string,
+  purpose: AccountOtpPurpose,
+): Promise<boolean> {
+  return consumeEmailOtp(clerkId, code, purpose);
+}
+
+async function consumeEmailOtp(
+  clerkId: string,
+  code: string,
+  purpose: AccountOtpPurpose,
+): Promise<boolean> {
   const hash = hashOtpCode(code.replace(/\s/g, ""));
   const now = new Date();
   const rows = await db
     .select()
     .from(deviceOtpTable)
-    .where(and(eq(deviceOtpTable.clerkId, clerkId), eq(deviceOtpTable.codeHash, hash), gt(deviceOtpTable.expiresAt, now)))
+    .where(
+      and(
+        eq(deviceOtpTable.clerkId, clerkId),
+        eq(deviceOtpTable.purpose, purpose),
+        eq(deviceOtpTable.codeHash, hash),
+        gt(deviceOtpTable.expiresAt, now),
+      ),
+    )
     .orderBy(desc(deviceOtpTable.createdAt))
     .limit(1);
 
@@ -131,25 +173,24 @@ export async function verifyNewDevice(
     .limit(1);
   if (!user) return { ok: false, error: "User not found" };
 
-  if (!user.totpEnabled || !user.totpSecretEncrypted) {
-    return {
-      ok: false,
-      error: "Enable Google Authenticator on your trusted device before signing in elsewhere",
-    };
-  }
-
-  const emailOk = await consumeEmailOtp(clerkId, emailCode);
+  const emailOk = await consumeEmailOtp(clerkId, emailCode, "device");
   if (!emailOk) return { ok: false, error: "Invalid or expired email code" };
 
-  let secret: string;
-  try {
-    secret = decryptSecret(user.totpSecretEncrypted);
-  } catch {
-    return { ok: false, error: "Authenticator not configured" };
-  }
+  if (user.totpEnabled && user.totpSecretEncrypted) {
+    if (!totpCode?.trim()) {
+      return { ok: false, error: "Authenticator code required" };
+    }
 
-  if (!verifyTotp(secret, totpCode)) {
-    return { ok: false, error: "Invalid authenticator code" };
+    let secret: string;
+    try {
+      secret = decryptSecret(user.totpSecretEncrypted);
+    } catch {
+      return { ok: false, error: "Authenticator not configured" };
+    }
+
+    if (!verifyTotp(secret, totpCode)) {
+      return { ok: false, error: "Invalid authenticator code" };
+    }
   }
 
   await trustDevice(clerkId, deviceId, "Verified device");

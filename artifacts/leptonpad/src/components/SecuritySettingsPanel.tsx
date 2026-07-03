@@ -6,6 +6,8 @@ import {
   setupTotp,
   type SecurityStatus,
 } from "@/lib/securityApi";
+import { registerWalletPasskey } from "@/lib/walletPasskeyClient";
+import { isWebAuthnAvailable, WALLET_LOCK_LABEL } from "@/lib/walletLockCopy";
 
 export function SecuritySettingsPanel() {
   const [status, setStatus] = useState<SecurityStatus | null>(null);
@@ -73,7 +75,7 @@ export function SecuritySettingsPanel() {
       await setWalletPin(walletPin, status?.totpEnabled ? walletPinTotp : undefined);
       setWalletPinInput("");
       setWalletPinTotp("");
-      setMessage("Wallet password set. You will need it to open Wallet.");
+      setMessage("Wallet lock saved. You will need it to open Wallet.");
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not set password");
@@ -82,24 +84,34 @@ export function SecuritySettingsPanel() {
     }
   };
 
+  const handleRegisterPasskey = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await registerWalletPasskey();
+      setMessage("Passkey added. You can unlock with fingerprint or Face ID on this device.");
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not add passkey");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const webAuthn = isWebAuthnAvailable();
+
   if (loading) {
     return <p className="text-sm text-[var(--color-ink-muted)]">Loading security…</p>;
   }
 
   return (
     <div className="space-y-6">
-      <div className="rounded-sm border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm" style={{ color: "#57534E" }}>
-        <strong style={{ color: "#92400E" }}>Protect your assets.</strong> Enable Google Authenticator
-        before using LeptonPad on another phone. Wallet keys are{" "}
-        <strong>AES-256 encrypted</strong> on our servers — never plaintext. Your wallet also has its
-        own password, separate from sign-in.
-      </div>
-
       {status && (
         <ul className="text-xs space-y-1" style={{ color: "#78716C" }}>
           <li>Trusted devices: {status.trustedDeviceCount}</li>
           <li>2FA: {status.totpEnabled ? "On" : "Off"}</li>
-          <li>Wallet password: {status.walletPinSet ? "Set" : "Not set"}</li>
+          <li>PIN or password: {status.walletPinSet ? "Set" : "Not set"}</li>
+          <li>Passkey: {status.walletPasskeySet ? "Set" : "Not set"}</li>
         </ul>
       )}
 
@@ -108,7 +120,7 @@ export function SecuritySettingsPanel() {
 
       <div className="space-y-3">
         <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>
-          Google Authenticator (required for new devices)
+          Two-factor authentication
         </h3>
         {!status?.totpEnabled ? (
           <>
@@ -153,22 +165,23 @@ export function SecuritySettingsPanel() {
           </>
         ) : (
           <p className="text-sm" style={{ color: "#57534E" }}>
-            Authenticator is active. Signing in on a new device requires your email code and app code.
+            New devices need your email code and authenticator app code.
           </p>
         )}
       </div>
 
       <div className="space-y-3 border-t pt-5" style={{ borderColor: "rgba(28,25,23,0.1)" }}>
         <h3 className="text-sm font-semibold" style={{ color: "#1C1917" }}>
-          Wallet password (fintech-style lock)
+          Wallet lock
         </h3>
         <p className="text-xs" style={{ color: "#78716C" }}>
-          Separate from your Clerk sign-in. Required to open Wallet and move USDC.
+          Choose {WALLET_LOCK_LABEL.toLowerCase()} to open Wallet and move USDC.
         </p>
         <input
           type="password"
+          inputMode="text"
           autoComplete="new-password"
-          placeholder={status?.walletPinSet ? "New wallet password" : "Create wallet password (6+ chars)"}
+          placeholder={status?.walletPinSet ? "New PIN or password" : "PIN or password (6+ characters)"}
           value={walletPin}
           onChange={(e) => setWalletPinInput(e.target.value)}
           className="w-full rounded-sm border px-3 py-2 text-sm"
@@ -192,8 +205,19 @@ export function SecuritySettingsPanel() {
           className="rounded-sm px-4 py-2 text-sm font-semibold text-white"
           style={{ background: "#1C1917" }}
         >
-          {status?.walletPinSet ? "Update wallet password" : "Set wallet password"}
+          {status?.walletPinSet ? "Update PIN or password" : "Save PIN or password"}
         </button>
+        {webAuthn && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleRegisterPasskey()}
+            className="rounded-sm px-4 py-2 text-sm font-semibold border w-full"
+            style={{ borderColor: "rgba(28,25,23,0.2)", color: "#1C1917" }}
+          >
+            {status?.walletPasskeySet ? "Add another passkey" : "Add passkey or fingerprint"}
+          </button>
+        )}
       </div>
     </div>
   );

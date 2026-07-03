@@ -51,7 +51,7 @@ const SENSITIVE = new Set([
 const PRODUCTION_BASE = {
   PUBLIC_URL: "https://lepton-pad.vercel.app",
   APP_URL: "https://lepton-pad.vercel.app",
-  INITIAL_ADMIN_EMAILS: "akintoyeisaac5@gmail.com",
+  INITIAL_ADMIN_EMAILS: "akintoyeisaac5@gmail.com,babrawitch001@gmail.com",
   WALLET_MODE: "custodial",
   MOCK_PAYMENTS: "false",
 };

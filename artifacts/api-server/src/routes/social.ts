@@ -423,6 +423,18 @@ router.post("/notifications/read-all", async (req, res): Promise<void> => {
   res.json({ ok: true });
 });
 
+router.post("/notifications/:id/read", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  await db
+    .update(notificationsTable)
+    .set({ read: true })
+    .where(and(eq(notificationsTable.userId, userId), eq(notificationsTable.id, id)));
+  res.json({ ok: true });
+});
+
 // ─── Reports ───────────────────────────────────────────────────────────────
 
 router.post("/content/:contentId/report", async (req, res): Promise<void> => {

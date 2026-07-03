@@ -112,6 +112,7 @@ export type AdminOverview = {
   featuredCount: number;
   totalUsers: number;
   verifiedCreators: number;
+  pendingAdSubmissions?: number;
   emailConfigured?: boolean;
 };
 
@@ -164,4 +165,80 @@ export function previewNewsletter(subject: string, body: string) {
 
 export function sendNewsletter(subject: string, body: string) {
   return apiPost<{ sent: number; subject: string; batchId: string }>("/admin/newsletter", { subject, body });
+}
+
+export type AdminAdCampaign = {
+  id: number;
+  title: string;
+  advertiser: string;
+  imageUrl: string | null;
+  targetUrl: string;
+  categorySlug: string | null;
+  active: boolean;
+  expiresAt: string | null;
+  submissionId: number | null;
+  impressionCount: number;
+  clickCount: number;
+  createdAt: string;
+};
+
+export type AdminAdCampaignInput = {
+  title: string;
+  advertiser: string;
+  targetUrl: string;
+  imageUrl?: string | null;
+  categorySlug?: string | null;
+  active?: boolean;
+  durationDays?: number;
+};
+
+export type AdminAdSubmission = {
+  id: number;
+  contactName: string | null;
+  contactEmail: string;
+  businessName: string;
+  headline: string;
+  targetUrl: string;
+  imageUrl: string;
+  durationDays: number;
+  durationLabel: string;
+  categorySlug: string | null;
+  status: string;
+  adminNote: string | null;
+  campaignId: number | null;
+  submitterUserId: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+};
+
+export function fetchAdminAds() {
+  return apiGet<AdminAdCampaign[]>("/admin/ads");
+}
+
+export function createAdminAd(body: AdminAdCampaignInput) {
+  return apiPost<AdminAdCampaign>("/admin/ads", body);
+}
+
+export function updateAdminAd(id: number, body: Partial<AdminAdCampaignInput>) {
+  return apiPatch<AdminAdCampaign>(`/admin/ads/${id}`, body);
+}
+
+export function deleteAdminAd(id: number) {
+  return apiDelete<{ id: number; title: string; deleted: boolean }>(`/admin/ads/${id}`);
+}
+
+export function fetchAdminAdSubmissions(status?: string) {
+  const q = status ? `?status=${encodeURIComponent(status)}` : "";
+  return apiGet<AdminAdSubmission[]>(`/admin/ad-submissions${q}`);
+}
+
+export function reviewAdminAdSubmission(
+  id: number,
+  status: "approved" | "rejected",
+  adminNote?: string,
+) {
+  return apiPatch<{
+    submission?: AdminAdSubmission;
+    campaign?: AdminAdCampaign;
+  }>(`/admin/ad-submissions/${id}`, { status, adminNote });
 }

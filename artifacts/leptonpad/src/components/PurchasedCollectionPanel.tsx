@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMyPurchasesWithSettlement } from "@/lib/platformApi";
 import { fetchReaderSummary } from "@/lib/dashboardApi";
-import { SettlementStatusBadge } from "@/components/SettlementRailPanel";
+import { SettlementStatusBadge } from "@/components/SettlementStatusBadge";
 
 export function PurchasedCollectionPanel() {
   const { data: summary, isLoading: summaryLoading } = useQuery({

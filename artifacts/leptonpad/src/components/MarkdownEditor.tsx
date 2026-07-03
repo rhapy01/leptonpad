@@ -50,15 +50,9 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder ?? "Write in Markdown…"}
-        rows={16}
-        className="w-full font-mono text-sm p-4 rounded"
-        style={{
-          border: "1px solid rgba(28,25,23,0.18)",
-          background: "#FFFFFF",
-          color: "#1C1917",
-          lineHeight: 1.6,
-          resize: "vertical",
-        }}
+        rows={18}
+        className="prose-textarea font-mono"
+        style={{ minHeight: "420px" }}
       />
       <p className="text-xs mt-2" style={{ color: "#A8A29E" }}>
         Supports **bold**, *italic*, # headings, images, and [links](url).

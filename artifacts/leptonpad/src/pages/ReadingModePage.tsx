@@ -21,10 +21,13 @@ import {
   unfollowCreator,
   fetchCollections,
   saveToCollection,
+  fetchContentMeta,
 } from "@/lib/platformApi";
 import { markdownToHtml } from "@/components/MarkdownEditor";
 import { CreatorName } from "@/components/CreatorName";
 import { ContentEngagement } from "@/components/ContentEngagement";
+import { SeoHead } from "@/components/SeoHead";
+import { ReadingGiftPrompt } from "@/components/ReadingGiftPrompt";
 import { ReadingEngagementRail } from "@/components/ReadingEngagementRail";
 import { ReadingSidebarMore } from "@/components/ReadingSidebarMore";
 import { YoutubeEmbed } from "@/components/YoutubeEmbed";
@@ -33,6 +36,7 @@ import { resolveCoverUrl } from "@/lib/contentCover";
 import { sanitizeArticleHtml } from "@/lib/sanitizeHtml";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { useToast } from "@/hooks/use-toast";
+import { copyContentShareLink } from "@/lib/shareContent";
 
 type FontSize = "sm" | "md" | "lg";
 
@@ -59,6 +63,23 @@ function plainTextFromBody(body: string, isHtml: boolean): string {
   return body.trim();
 }
 
+function estimatedReadMinutes(content: {
+  readingTimeMinutes?: number | null;
+  body?: string | null;
+  previewText?: string | null;
+}): number {
+  if (content.readingTimeMinutes && content.readingTimeMinutes > 0) {
+    return content.readingTimeMinutes;
+  }
+  const isHtml = (content.body ?? "").trimStart().startsWith("<");
+  const words = countWords(plainTextFromBody(content.body ?? content.previewText ?? "", isHtml));
+  return Math.max(1, Math.ceil(words / 200));
+}
+
+function giftPromptStorageKey(contentId: number) {
+  return `leptonpad:gift-prompt:${contentId}`;
+}
+
 export default function ReadingModePage({ id }: { id: number }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -72,7 +93,11 @@ export default function ReadingModePage({ id }: { id: number }) {
   const [showNext, setShowNext] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [readingAloud, setReadingAloud] = useState(false);
+  const [giftPromptVisible, setGiftPromptVisible] = useState(false);
+  const [giftCompleted, setGiftCompleted] = useState(false);
+  const [giftPromptDismissed, setGiftPromptDismissed] = useState(false);
   const progressSaveRef = useRef(0);
+  const readStartedAtRef = useRef(Date.now());
   const commentsRef = useRef<HTMLDivElement>(null);
   const articleRef = useRef<HTMLElement>(null);
 
@@ -96,6 +121,12 @@ export default function ReadingModePage({ id }: { id: number }) {
     queryKey: ["collections"],
     queryFn: fetchCollections,
     enabled: !!me,
+  });
+
+  const { data: seoMeta } = useQuery({
+    queryKey: ["seo", id],
+    queryFn: () => fetchContentMeta(id),
+    enabled: !!content,
   });
 
   const followMutation = useMutation({
@@ -122,6 +153,19 @@ export default function ReadingModePage({ id }: { id: number }) {
 
   const isFree = Number(content?.price ?? 0) === 0;
   const hasAccess = access?.hasAccess || isFree || content?.hasAccess;
+  const canGift = Boolean(
+    isFree &&
+    content &&
+    me?.clerkId !== content.creatorId &&
+    !giftCompleted,
+  );
+
+  useEffect(() => {
+    if (!id) return;
+    setGiftPromptDismissed(sessionStorage.getItem(giftPromptStorageKey(id)) === "dismissed");
+    setGiftCompleted(sessionStorage.getItem(giftPromptStorageKey(id)) === "gifted");
+    readStartedAtRef.current = Date.now();
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -179,6 +223,14 @@ export default function ReadingModePage({ id }: { id: number }) {
     setProgress(pct);
     if (pct >= 80) setShowNext(true);
 
+    if (canGift && !giftPromptDismissed && !giftPromptVisible && content) {
+      const halfReadMs = estimatedReadMinutes(content) * 0.5 * 60 * 1000;
+      const elapsed = Date.now() - readStartedAtRef.current;
+      if (pct >= 50 || elapsed >= halfReadMs) {
+        setGiftPromptVisible(true);
+      }
+    }
+
     const now = Date.now();
     if (now - progressSaveRef.current > 5000) {
       progressSaveRef.current = now;
@@ -188,16 +240,27 @@ export default function ReadingModePage({ id }: { id: number }) {
         completed: pct >= 95,
       }).catch(() => {});
     }
-  }, [id]);
+  }, [id, canGift, giftPromptDismissed, giftPromptVisible, content]);
+
+  useEffect(() => {
+    if (!canGift || giftPromptDismissed || giftPromptVisible || !content) return;
+    const halfReadMs = estimatedReadMinutes(content) * 0.5 * 60 * 1000;
+    const timer = window.setTimeout(() => setGiftPromptVisible(true), halfReadMs);
+    return () => window.clearTimeout(timer);
+  }, [canGift, giftPromptDismissed, giftPromptVisible, content]);
 
   useEffect(() => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  const shareLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast({ title: "Link copied" });
+  const shareLink = async () => {
+    try {
+      await copyContentShareLink(id);
+      toast({ title: "Link copied — rich preview on X & social" });
+    } catch {
+      toast({ title: "Could not copy link", variant: "destructive" });
+    }
   };
 
   const toggleReadAloud = () => {
@@ -300,6 +363,18 @@ export default function ReadingModePage({ id }: { id: number }) {
       className={`reading-shell reading-fade-in${darkMode ? " reading-shell--dark" : ""}${sidebarOpen ? " reading-shell--sidebar-open" : ""}`}
       style={{ opacity: visible ? 1 : 0 }}
     >
+      <SeoHead
+        meta={
+          seoMeta
+            ? {
+                title: seoMeta.title,
+                description: seoMeta.description,
+                canonicalUrl: seoMeta.canonicalUrl,
+                image: seoMeta.og?.image as string,
+              }
+            : null
+        }
+      />
       <div
         className="reading-progress-bar"
         data-testid="reading-progress-bar"
@@ -543,7 +618,7 @@ export default function ReadingModePage({ id }: { id: number }) {
             )}
 
             <div ref={commentsRef} className="reading-comments">
-              <ContentEngagement contentId={id} creatorId={content.creatorId} />
+              <ContentEngagement contentId={id} contentTitle={content.title} creatorId={content.creatorId} />
             </div>
           </article>
 
@@ -551,9 +626,36 @@ export default function ReadingModePage({ id }: { id: number }) {
             contentId={id}
             onComment={scrollToComments}
             onClose={() => setLocation(`/content/${id}`)}
+            showGift={canGift}
+            creatorId={content.creatorId}
+            creatorName={content.creatorName}
+            giftPulse={giftPromptVisible}
+            onGiftSent={() => {
+              setGiftCompleted(true);
+              setGiftPromptVisible(false);
+              sessionStorage.setItem(giftPromptStorageKey(id), "gifted");
+            }}
           />
         </div>
       </div>
+
+      {canGift && giftPromptVisible && !giftPromptDismissed && (
+        <ReadingGiftPrompt
+          contentId={id}
+          creatorId={content.creatorId}
+          creatorName={content.creatorName}
+          onDismiss={() => {
+            setGiftPromptVisible(false);
+            setGiftPromptDismissed(true);
+            sessionStorage.setItem(giftPromptStorageKey(id), "dismissed");
+          }}
+          onGiftSent={() => {
+            setGiftCompleted(true);
+            setGiftPromptVisible(false);
+            sessionStorage.setItem(giftPromptStorageKey(id), "gifted");
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,8 @@ import {
 } from "../lib/blobStorage";
 import { cloudinaryEnabled } from "../lib/cloudinaryStorage";
 import { uploadRateLimit } from "../middlewares/rateLimit";
+import { logger } from "../lib/logger";
+import { clientErrorMessage } from "../lib/safeError";
 
 const router = Router();
 router.use(uploadRateLimit);
@@ -35,54 +37,59 @@ router.get("/config", (_req, res): void => {
 });
 
 router.post("/", async (req, res): Promise<void> => {
-  const { userId } = getAuth(req);
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    const { userId } = getAuth(req);
+    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-  const { filename, data, mimeType } = req.body as {
-    filename?: string; data?: string; mimeType?: string;
-  };
+    const { filename, data, mimeType } = req.body as {
+      filename?: string; data?: string; mimeType?: string;
+    };
 
-  if (!filename || !data || !mimeType) {
-    res.status(400).json({ error: "filename, data (base64), and mimeType required" });
-    return;
+    if (!filename || !data || !mimeType) {
+      res.status(400).json({ error: "filename, data (base64), and mimeType required" });
+      return;
+    }
+
+    if (!isAllowedMimeType(mimeType)) {
+      res.status(400).json({ error: `MIME type not allowed: ${mimeType}` });
+      return;
+    }
+
+    const buffer = Buffer.from(data, "base64");
+    const maxBytes = maxBytesForMime(mimeType);
+    if (buffer.length > maxBytes) {
+      res.status(400).json({ error: `File too large (max ${Math.round(maxBytes / 1024 / 1024)}MB)` });
+      return;
+    }
+
+    const stored = await storeUploadedFile({
+      buffer,
+      filename,
+      mimeType,
+      userId,
+    });
+
+    const [row] = await db.insert(mediaUploadsTable).values({
+      userId,
+      filename: stored.storedKey,
+      originalName: filename,
+      mimeType,
+      sizeBytes: buffer.length,
+      url: stored.url,
+    }).returning();
+
+    res.status(201).json({
+      id: row.id,
+      url: row.url,
+      mimeType: row.mimeType,
+      sizeBytes: row.sizeBytes,
+      originalName: row.originalName,
+      provider: stored.provider,
+    });
+  } catch (err) {
+    logger.error({ err }, "Upload failed");
+    res.status(500).json({ error: clientErrorMessage(err, "Upload failed") });
   }
-
-  if (!isAllowedMimeType(mimeType)) {
-    res.status(400).json({ error: `MIME type not allowed: ${mimeType}` });
-    return;
-  }
-
-  const buffer = Buffer.from(data, "base64");
-  const maxBytes = maxBytesForMime(mimeType);
-  if (buffer.length > maxBytes) {
-    res.status(400).json({ error: `File too large (max ${Math.round(maxBytes / 1024 / 1024)}MB)` });
-    return;
-  }
-
-  const stored = await storeUploadedFile({
-    buffer,
-    filename,
-    mimeType,
-    userId,
-  });
-
-  const [row] = await db.insert(mediaUploadsTable).values({
-    userId,
-    filename: stored.storedKey,
-    originalName: filename,
-    mimeType,
-    sizeBytes: buffer.length,
-    url: stored.url,
-  }).returning();
-
-  res.status(201).json({
-    id: row.id,
-    url: row.url,
-    mimeType: row.mimeType,
-    sizeBytes: row.sizeBytes,
-    originalName: row.originalName,
-    provider: stored.provider,
-  });
 });
 
 router.get("/mine", async (req, res): Promise<void> => {

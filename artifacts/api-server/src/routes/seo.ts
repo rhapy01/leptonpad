@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, contentTable } from "@workspace/db";
+import { buildContentSeoFields, getPublicBaseUrl, renderContentShareHtml } from "../lib/seoMeta";
 
 const router = Router();
 
 // GET /api/seo/sitemap.xml
 router.get("/sitemap.xml", async (_req, res): Promise<void> => {
-  const baseUrl = process.env.PUBLIC_URL ?? "https://leptonpad.com";
+  const baseUrl = getPublicBaseUrl();
   const rows = await db.select({ id: contentTable.id, slug: contentTable.slug, updatedAt: contentTable.updatedAt })
     .from(contentTable)
     .where(eq(contentTable.published, true))
@@ -41,42 +42,22 @@ router.get("/content/:id/meta", async (req, res): Promise<void> => {
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const rows = await db.select().from(contentTable).where(eq(contentTable.id, id)).limit(1);
-  if (!rows.length) { res.status(404).json({ error: "Not found" }); return; }
+  if (!rows.length || !rows[0].published) { res.status(404).json({ error: "Not found" }); return; }
 
-  const item = rows[0];
-  const baseUrl = process.env.PUBLIC_URL ?? "https://leptonpad.com";
-  const description = item.metaDescription ?? item.previewText ?? item.title;
-  const url = `${baseUrl}/content/${item.id}`;
+  res.json(buildContentSeoFields(rows[0]));
+});
 
-  res.json({
-    title: item.title,
-    description,
-    canonicalUrl: url,
-    og: {
-      title: item.title,
-      description,
-      image: item.coverImageUrl,
-      url,
-      type: "article",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: item.title,
-      description,
-      image: item.coverImageUrl,
-    },
-    structuredData: {
-      "@context": "https://schema.org",
-      "@type": "Article",
-      headline: item.title,
-      description,
-      image: item.coverImageUrl,
-      datePublished: item.createdAt.toISOString(),
-      dateModified: item.updatedAt.toISOString(),
-      keywords: item.tags?.join(", "),
-      inLanguage: item.language ?? "en",
-    },
-  });
+// GET /api/seo/content/:id/card — HTML with Open Graph tags for social crawlers
+router.get("/content/:id/card", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).send("Invalid id"); return; }
+
+  const rows = await db.select().from(contentTable).where(eq(contentTable.id, id)).limit(1);
+  if (!rows.length || !rows[0].published) { res.status(404).send("Not found"); return; }
+
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=300, s-maxage=600");
+  res.send(renderContentShareHtml(rows[0]));
 });
 
 export default router;

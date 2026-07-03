@@ -43,7 +43,7 @@ export function DashboardShell({
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
         <div
           className={`flex flex-col gap-4 py-6${showPublish ? " sm:flex-row sm:items-end sm:justify-between" : ""}`}
-          style={{ borderBottom: "1px solid rgba(28,25,23,0.15)" }}
+          style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
         >
           <div className="min-w-0">
             <p className="editorial-label mb-1">Dashboard</p>

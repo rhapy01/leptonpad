@@ -30,11 +30,11 @@ const settingsSchema = z.object({
 });
 type SettingsForm = z.infer<typeof settingsSchema>;
 
-const sectionClass = "rounded-sm border bg-white p-5 sm:p-6";
-const sectionBorder = { borderColor: "rgba(28,25,23,0.12)" };
+const sectionClass = "rounded-sm border bg-[var(--color-paper)] p-5 sm:p-6";
+const sectionBorder = { borderColor: "var(--color-border-subtle)" };
 const inputClass =
-  "w-full rounded-sm border bg-white px-3 py-2.5 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus:outline-none focus:border-[var(--color-ink)]/40";
-const inputStyle = { borderColor: "rgba(28,25,23,0.18)" };
+  "w-full rounded-sm border bg-[var(--color-paper)] px-3 py-2.5 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus:outline-none focus:border-[var(--color-ink)]/40";
+const inputStyle = { borderColor: "var(--color-border-subtle)" };
 const labelClass = "homepage-body mb-1.5 block text-xs font-semibold text-[var(--color-ink-secondary)]";
 
 function SettingsSection({
@@ -185,9 +185,8 @@ export default function SettingsPage() {
                 <label className={labelClass}>Bio</label>
                 <textarea
                   {...form.register("bio")}
-                  rows={4}
-                  className={inputClass}
-                  style={inputStyle}
+                  rows={5}
+                  className="prose-textarea"
                   placeholder="A short intro for your profile…"
                 />
               </div>
@@ -213,15 +212,15 @@ export default function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection
-            title="Security & wallet protection"
-            description="Required for asset safety — especially before using LeptonPad on another phone."
+            title="Security"
+            description="Two-factor authentication and wallet lock."
           >
             <SecuritySettingsPanel />
           </SettingsSection>
 
           <SettingsSection
             title="In-app wallet"
-            description="Account-linked USDC wallet. Keys are AES-256 encrypted on our servers (not plaintext). Open Wallet to enter your wallet password."
+            description="Your USDC balance for unlocking content."
           >
             {wallet?.address ? (
               <p className="homepage-body text-xs font-mono break-all">

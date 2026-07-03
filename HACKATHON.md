@@ -39,7 +39,7 @@ Subscriptions and bundles price out single articles, songs, and videos. Creators
 - **Gateway + x402** — `GET /api/payments/gateway/:contentId`
 - **LeptonSplit** — `splitPayment` per sale (creator route registered at first settlement, not at publish)
 - **Auto-retry** — pending splits complete on unlock check, earnings load, background
-- **UI** — Wallet / Earnings / Collection show settlement rail + Arcscan links
+- **UI** — Earnings payment rows link to Arcscan when settled; settlement architecture is documented below (not shown in Wallet / Collection)
 
 Access (read again) stays in the app DB; **money** is what’s on-chain.
 
@@ -76,6 +76,15 @@ Fill these from production DB / dashboard before submitting.
 - [ ] Live URL: https://lepton-pad.vercel.app
 - [ ] Form: state **RFB 06** explicitly; traction numbers from section above
 - [ ] Do **not** lead with “AI agents” — lead with per-piece monetization on Arc
+
+---
+
+## Wallet security (docs only — not shown in product UI)
+
+- **Custodial mode** (`WALLET_MODE=custodial`): private keys AES-256-GCM encrypted at rest in Postgres; never plaintext.
+- **2FA**: Google Authenticator required before signing in on a new device (email OTP + TOTP).
+- **Wallet lock**: PIN, password, or WebAuthn passkey (fingerprint / Face ID on supported devices); unlocks Wallet UI and fund movements.
+- **Client mode** (`WALLET_MODE=client`): keys in browser IndexedDB; optional one-time migration from server via `POST /api/wallet/export-legacy-key`.
 
 ---
 

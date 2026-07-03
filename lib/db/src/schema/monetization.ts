@@ -23,8 +23,32 @@ export const adCampaignsTable = pgTable("ad_campaigns", {
   targetUrl: text("target_url").notNull(),
   categorySlug: text("category_slug"),
   active: boolean("active").notNull().default(true),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  submissionId: integer("submission_id"),
   impressionCount: integer("impression_count").notNull().default(0),
   clickCount: integer("click_count").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const adSubmissionStatusEnum = ["pending", "approved", "rejected"] as const;
+export type AdSubmissionStatus = (typeof adSubmissionStatusEnum)[number];
+
+export const adSubmissionsTable = pgTable("ad_submissions", {
+  id: serial("id").primaryKey(),
+  submitterUserId: text("submitter_user_id"),
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email").notNull(),
+  businessName: text("business_name").notNull(),
+  headline: text("headline").notNull(),
+  targetUrl: text("target_url").notNull(),
+  imageUrl: text("image_url").notNull(),
+  durationDays: integer("duration_days").notNull(),
+  categorySlug: text("category_slug"),
+  status: text("status").notNull().default("pending"),
+  adminNote: text("admin_note"),
+  reviewedByClerkId: text("reviewed_by_clerk_id"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  campaignId: integer("campaign_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

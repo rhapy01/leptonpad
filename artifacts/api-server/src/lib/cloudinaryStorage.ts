@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
-import { extname } from "node:path";
 import { randomUUID } from "node:crypto";
+import { v2 as cloudinary } from "cloudinary";
 import { logger } from "./logger";
 import { envValue } from "./blobStorage";
 
@@ -10,16 +9,38 @@ export type CloudinaryConfig = {
   apiSecret: string;
 };
 
+/** Cloudinary API keys are numeric; secrets are alphanumeric. Fix common swap in CLOUDINARY_URL. */
+export function normalizeCloudinaryCredentials(config: CloudinaryConfig): CloudinaryConfig {
+  const keyIsNumeric = /^\d{8,}$/.test(config.apiKey);
+  const secretIsNumeric = /^\d{8,}$/.test(config.apiSecret);
+  const keyHasLetters = /[a-zA-Z]/.test(config.apiKey);
+
+  if (keyHasLetters && secretIsNumeric) {
+    logger.warn("CLOUDINARY_URL had api_key and api_secret reversed — auto-corrected");
+    return {
+      cloudName: config.cloudName,
+      apiKey: config.apiSecret,
+      apiSecret: config.apiKey,
+    };
+  }
+
+  if (!keyIsNumeric && !secretIsNumeric && keyHasLetters) {
+    return config;
+  }
+
+  return config;
+}
+
 /** Parse `cloudinary://api_key:api_secret@cloud_name` (Heroku / dashboard format). */
 export function parseCloudinaryUrl(raw: string): CloudinaryConfig | null {
   const trimmed = raw.trim().replace(/^["']|["']$/g, "");
   const match = trimmed.match(/^cloudinary:\/\/([^:]+):([^@]+)@([^/?#]+)/);
   if (!match) return null;
-  return {
+  return normalizeCloudinaryCredentials({
     apiKey: decodeURIComponent(match[1]),
     apiSecret: decodeURIComponent(match[2]),
-    cloudName: match[3],
-  };
+    cloudName: decodeURIComponent(match[3]),
+  });
 }
 
 export function getCloudinaryConfig(): CloudinaryConfig | null {
@@ -33,14 +54,37 @@ export function getCloudinaryConfig(): CloudinaryConfig | null {
   const apiKey = envValue("CLOUDINARY_API_KEY");
   const apiSecret = envValue("CLOUDINARY_API_SECRET");
   if (cloudName && apiKey && apiSecret) {
-    return { cloudName, apiKey, apiSecret };
+    return normalizeCloudinaryCredentials({ cloudName, apiKey, apiSecret });
   }
 
   return null;
 }
 
+let configured = false;
+
+export function applyCloudinaryConfig(): CloudinaryConfig | null {
+  const config = getCloudinaryConfig();
+  if (!config) return null;
+
+  cloudinary.config({
+    cloud_name: config.cloudName,
+    api_key: config.apiKey,
+    api_secret: config.apiSecret,
+    secure: true,
+  });
+  configured = true;
+  return config;
+}
+
 export function cloudinaryEnabled(): boolean {
   return getCloudinaryConfig() !== null;
+}
+
+function resourceTypeForMime(mimeType: string): "image" | "video" | "raw" | "auto" {
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/") || mimeType.startsWith("audio/")) return "video";
+  if (mimeType === "application/pdf") return "raw";
+  return "auto";
 }
 
 export async function uploadToCloudinary(input: {
@@ -49,45 +93,43 @@ export async function uploadToCloudinary(input: {
   mimeType: string;
   userId: string;
 }): Promise<{ url: string; storedKey: string }> {
-  const config = getCloudinaryConfig();
+  const config = applyCloudinaryConfig();
   if (!config) throw new Error("Cloudinary is not configured");
 
-  const { cloudName, apiKey, apiSecret } = config;
-  const ext = extname(input.filename) || `.${input.mimeType.split("/")[1] ?? "bin"}`;
-  const publicId = `${randomUUID()}${ext}`;
-  const folder = `leptonpad/${input.userId}`;
-  const timestamp = Math.round(Date.now() / 1000);
-
-  const signature = createHash("sha1")
-    .update(`folder=${folder}&public_id=${publicId}&timestamp=${timestamp}${apiSecret}`)
-    .digest("hex");
-
-  const form = new FormData();
-  form.append("file", new Blob([input.buffer], { type: input.mimeType }), input.filename);
-  form.append("api_key", apiKey);
-  form.append("timestamp", String(timestamp));
-  form.append("signature", signature);
-  form.append("folder", folder);
-  form.append("public_id", publicId);
-
-  const resourceType = input.mimeType.startsWith("video/")
-    ? "video"
-    : input.mimeType.startsWith("audio/")
-      ? "video"
-      : "image";
-
-  const endpoint =
-    resourceType === "image"
-      ? `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`
-      : `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
-
-  const res = await fetch(endpoint, { method: "POST", body: form });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`Cloudinary upload failed (${res.status}): ${detail || res.statusText}`);
+  if (!configured) {
+    throw new Error("Cloudinary SDK failed to initialize");
   }
 
-  const body = (await res.json()) as { secure_url: string; public_id: string };
-  logger.info({ publicId: body.public_id, bytes: input.buffer.length }, "Stored upload in Cloudinary");
-  return { url: body.secure_url, storedKey: body.public_id };
+  const folder = `leptonpad/${input.userId}`;
+  const publicId = randomUUID();
+  const resourceType = resourceTypeForMime(input.mimeType);
+  const dataUri = `data:${input.mimeType};base64,${input.buffer.toString("base64")}`;
+
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder,
+    public_id: publicId,
+    resource_type: resourceType,
+    overwrite: false,
+    unique_filename: false,
+    use_filename: false,
+  });
+
+  logger.info(
+    { publicId: result.public_id, bytes: input.buffer.length, resourceType },
+    "Stored upload in Cloudinary",
+  );
+
+  return { url: result.secure_url, storedKey: result.public_id };
+}
+
+export async function pingCloudinary(): Promise<boolean> {
+  const config = applyCloudinaryConfig();
+  if (!config) return false;
+  try {
+    await cloudinary.api.ping();
+    return true;
+  } catch (err) {
+    logger.warn({ err }, "Cloudinary ping failed");
+    return false;
+  }
 }

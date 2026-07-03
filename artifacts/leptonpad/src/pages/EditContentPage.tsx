@@ -15,12 +15,13 @@ import { useToast } from "@/hooks/use-toast";
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: "10px 14px",
+  padding: "12px 16px",
   border: "1px solid rgba(28,25,23,0.18)",
   borderRadius: "2px",
   background: "#FFFFFF",
   color: "#1C1917",
-  fontSize: "0.9375rem",
+  fontSize: "1.0625rem",
+  lineHeight: 1.75,
   fontFamily: "'Lora', Georgia, serif",
   outline: "none",
 };
@@ -221,7 +222,7 @@ export default function EditContentPage({ id }: { id: number }) {
 
           <div>
             <label style={labelStyle}>SEO meta description</label>
-            <textarea value={metaDescription} onChange={e => setMetaDescription(e.target.value)} rows={2} style={{ ...inputStyle, resize: "none" }} />
+            <textarea value={metaDescription} onChange={e => setMetaDescription(e.target.value)} rows={4} className="prose-textarea" style={{ resize: "none" }} />
           </div>
 
           <div>
@@ -240,7 +241,7 @@ export default function EditContentPage({ id }: { id: number }) {
 
           <div>
             <label style={labelStyle}>Preview teaser</label>
-            <textarea value={previewText} onChange={e => setPreviewText(e.target.value)} rows={3} style={{ ...inputStyle, resize: "none" }} />
+            <textarea value={previewText} onChange={e => setPreviewText(e.target.value)} rows={5} className="prose-textarea" style={{ resize: "none" }} />
           </div>
 
           <div>

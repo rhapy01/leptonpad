@@ -14,7 +14,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardShell } from "@/components/DashboardShell";
 import { WalletFundsPanel } from "@/components/WalletFundsPanel";
-import { SettlementRailPanel, SettlementStatusBadge } from "@/components/SettlementRailPanel";
+import { SettlementStatusBadge } from "@/components/SettlementStatusBadge";
 
 export default function EarningsPage() {
   const queryClient = useQueryClient();
@@ -97,8 +97,6 @@ export default function EarningsPage() {
                 ]
             }
           </div>
-
-          <SettlementRailPanel variant="creator" />
 
           <WalletFundsPanel variant="embedded" />
 

@@ -51,8 +51,8 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(cors(corsOptions()));
 app.use(cookieParser());
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 app.use(
   clerkMiddleware((req) => ({

@@ -27,12 +27,26 @@ export function SeoHead({ meta }: { meta: SeoMeta | null }) {
     setMeta("og:title", meta.title, true);
     setMeta("og:description", meta.description, true);
     setMeta("og:type", "article", true);
+    setMeta("og:site_name", "LeptonPad", true);
     if (meta.canonicalUrl) setMeta("og:url", meta.canonicalUrl, true);
-    if (meta.image) setMeta("og:image", meta.image, true);
+    if (meta.image) {
+      setMeta("og:image", meta.image, true);
+      setMeta("og:image:secure_url", meta.image, true);
+      setMeta("twitter:image", meta.image);
+    }
     setMeta("twitter:card", "summary_large_image");
     setMeta("twitter:title", meta.title);
     setMeta("twitter:description", meta.description);
-    if (meta.image) setMeta("twitter:image", meta.image);
+
+    if (meta.canonicalUrl) {
+      let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "canonical";
+        document.head.appendChild(link);
+      }
+      link.href = meta.canonicalUrl;
+    }
 
     return () => {
       document.title = "LeptonPad";

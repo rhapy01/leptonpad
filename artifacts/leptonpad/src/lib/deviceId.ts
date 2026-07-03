@@ -1,5 +1,7 @@
 const STORAGE_KEY = "leptonpad_device_id";
 
+let sessionDeviceId: string | null = null;
+
 function randomId(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -11,11 +13,15 @@ export function getDeviceId(): string {
   try {
     let id = localStorage.getItem(STORAGE_KEY);
     if (!id || id.length < 16) {
-      id = randomId();
+      id = sessionDeviceId ?? randomId();
+      sessionDeviceId = id;
       localStorage.setItem(STORAGE_KEY, id);
+    } else {
+      sessionDeviceId = id;
     }
     return id;
   } catch {
-    return randomId();
+    if (!sessionDeviceId) sessionDeviceId = randomId();
+    return sessionDeviceId;
   }
 }

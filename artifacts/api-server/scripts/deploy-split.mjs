@@ -112,7 +112,8 @@ Deploy tx: ${hash}
 
 Add to .env:
 LEPTON_SPLIT_CONTRACT=${contractAddress}
-GATEWAY_SELLER_ADDRESS=${contractAddress}
+# x402 seller = platform EOA (PLATFORM_WALLET_ADDRESS), NOT the contract above
+GATEWAY_SELLER_ADDRESS=${platformWallet}
 `);
 }
 

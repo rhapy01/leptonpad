@@ -12,6 +12,7 @@ import {
   type Comment,
 } from "@/lib/platformApi";
 import { CreatorName } from "@/components/CreatorName";
+import { ShareContentButton } from "@/components/ShareContentButton";
 import { useToast } from "@/hooks/use-toast";
 
 function CommentItem({
@@ -52,9 +53,11 @@ function CommentItem({
 
 export function ContentEngagement({
   contentId,
+  contentTitle,
   creatorId,
 }: {
   contentId: number;
+  contentTitle: string;
   creatorId: string;
 }) {
   const { data: me } = useGetMe();
@@ -145,16 +148,7 @@ export function ContentEngagement({
             🔖 Save
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => {
-            navigator.clipboard.writeText(window.location.href);
-            toast({ title: "Link copied" });
-          }}
-          className="engagement-btn px-4 py-2 text-sm rounded"
-        >
-          Share
-        </button>
+        <ShareContentButton contentId={contentId} title={contentTitle} />
         {me && me.clerkId !== creatorId && (
           <button
             type="button"
@@ -172,8 +166,8 @@ export function ContentEngagement({
             value={reportReason}
             onChange={e => setReportReason(e.target.value)}
             placeholder="Why are you reporting this content?"
-            rows={3}
-            className="engagement-input w-full p-3 text-sm rounded mb-2"
+            rows={4}
+            className="engagement-input prose-textarea w-full rounded mb-2"
           />
           <button
             type="button"
@@ -202,9 +196,8 @@ export function ContentEngagement({
             value={commentText}
             onChange={e => setCommentText(e.target.value)}
             placeholder={replyToId ? "Write a reply…" : "Join the discussion…"}
-            rows={3}
-            className="engagement-input w-full p-3 text-sm rounded mb-2"
-            style={{ fontFamily: "'Lora', Georgia, serif" }}
+            rows={4}
+            className="engagement-input prose-textarea w-full rounded mb-2"
           />
           <button
             type="button"

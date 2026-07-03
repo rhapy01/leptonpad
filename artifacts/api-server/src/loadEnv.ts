@@ -62,6 +62,23 @@ if (process.env.PRIVATE_KEYS && !process.env.SPLIT_OWNER_PRIVATE_KEY) {
   process.env.SPLIT_OWNER_PRIVATE_KEY = process.env.TREASURY_PRIVATE_KEY;
 }
 
+// Gateway seller must be the platform EOA — not LeptonSplit (Circle credits Gateway balance, not contract receive()).
+const splitContract = process.env.LEPTON_SPLIT_CONTRACT?.trim();
+const gatewaySeller = process.env.GATEWAY_SELLER_ADDRESS?.trim();
+const platformWallet = process.env.PLATFORM_WALLET_ADDRESS?.trim();
+if (
+  splitContract &&
+  gatewaySeller &&
+  gatewaySeller.toLowerCase() === splitContract.toLowerCase() &&
+  platformWallet &&
+  platformWallet.toLowerCase() !== gatewaySeller.toLowerCase()
+) {
+  process.env.GATEWAY_SELLER_ADDRESS = platformWallet;
+  console.warn(
+    `[settlement] GATEWAY_SELLER_ADDRESS was LeptonSplit — corrected to PLATFORM_WALLET_ADDRESS (${platformWallet})`,
+  );
+}
+
 // Frontend uses PORT; API uses API_PORT from the single root .env
 if (process.env.API_PORT) {
   process.env.PORT = process.env.API_PORT;

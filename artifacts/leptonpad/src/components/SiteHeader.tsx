@@ -24,8 +24,8 @@ export function SiteHeader({ showTicker = true }: SiteHeaderProps) {
   const { t } = useI18n();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-  const bg = "#ffffff";
-  const border = "rgba(28,25,23,0.12)";
+  const bg = "var(--color-page)";
+  const border = "var(--color-border-subtle)";
   const mutedColor = "var(--color-ink-muted)";
   const activeColor = "var(--color-ink)";
 
@@ -38,7 +38,7 @@ export function SiteHeader({ showTicker = true }: SiteHeaderProps) {
           <Link href="/" className="flex shrink-0 items-center gap-2">
             <div
               className="flex h-6 w-6 items-center justify-center rounded-full border"
-              style={{ borderColor: "rgba(28,25,23,0.4)" }}
+              style={{ borderColor: "var(--color-border-subtle)" }}
             >
               <span className="text-xs font-bold leading-none" style={{ fontFamily: "Georgia, serif", color: activeColor }}>λ</span>
             </div>
@@ -82,7 +82,7 @@ export function SiteHeader({ showTicker = true }: SiteHeaderProps) {
                   {user?.imageUrl ? (
                     <img src={user.imageUrl} alt={user.name ?? ""} className="h-7 w-7 rounded-full border object-cover" style={{ borderColor: border }} />
                   ) : (
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full border" style={{ borderColor: border, background: "rgba(28,25,23,0.08)" }}>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full border theme-avatar-fallback" style={{ borderColor: border }}>
                       <span className="text-xs" style={{ color: mutedColor }}>{user?.name?.[0]?.toUpperCase() ?? "?"}</span>
                     </div>
                   )}
@@ -139,7 +139,7 @@ export function SiteHeader({ showTicker = true }: SiteHeaderProps) {
                   style={{
                     color: active ? activeColor : mutedColor,
                     fontWeight: active ? 600 : 400,
-                    background: active ? "rgba(28,25,23,0.06)" : "transparent",
+                    background: active ? "var(--color-hover-surface)" : "transparent",
                   }}
                 >
                   {t(link.labelKey)}
@@ -155,18 +155,18 @@ export function SiteHeader({ showTicker = true }: SiteHeaderProps) {
                 style={{
                   color: isNavLinkActive(location, "/dashboard") ? activeColor : mutedColor,
                   fontWeight: isNavLinkActive(location, "/dashboard") ? 600 : 400,
-                  background: isNavLinkActive(location, "/dashboard") ? "rgba(28,25,23,0.06)" : "transparent",
+                  background: isNavLinkActive(location, "/dashboard") ? "var(--color-hover-surface)" : "transparent",
                 }}
               >
                 {t("nav.dashboard")}
               </Link>
             )}
 
-            <div className="px-3 py-2 sm:hidden">
+            <div className="flex items-center gap-2 px-3 py-2 sm:hidden">
               <LanguageSwitcher />
             </div>
 
-            <div className="mt-2 border-t pt-2 md:hidden" style={{ borderColor: "rgba(28,25,23,0.1)" }}>
+            <div className="mt-2 border-t pt-2 md:hidden" style={{ borderColor: "var(--color-border-muted)" }}>
               {isSignedIn ? (
                 <div className="flex flex-col gap-2 px-3">
                   <div className="flex items-center justify-between gap-2">
@@ -174,7 +174,7 @@ export function SiteHeader({ showTicker = true }: SiteHeaderProps) {
                       {user?.imageUrl ? (
                         <img src={user.imageUrl} alt={user.name ?? ""} className="h-7 w-7 rounded-full object-cover shrink-0" />
                       ) : (
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(28,25,23,0.08)" }}>
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full theme-avatar-fallback">
                           <span className="text-xs" style={{ color: mutedColor }}>{user?.name?.[0]?.toUpperCase() ?? "?"}</span>
                         </div>
                       )}

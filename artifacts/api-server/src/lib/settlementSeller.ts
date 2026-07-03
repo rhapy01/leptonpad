@@ -9,8 +9,8 @@ export function arcTxUrl(txHash: string | null | undefined): string | null {
 }
 
 /**
- * x402 seller address — the LeptonSplit contract.
- * Gateway settles full payment to the contract; splitPayment atomically disburses shares.
+ * x402 seller address — platform EOA (Gateway balance holder).
+ * Unlock revenue is withdrawn to LeptonSplit, then splitPayment disburses creator/platform shares.
  */
 export async function resolveSellerAddress(_creatorId: string): Promise<string | null> {
   return getPaymentConfig().sellerAddress;

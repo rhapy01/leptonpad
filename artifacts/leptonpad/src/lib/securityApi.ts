@@ -6,10 +6,12 @@ export interface SecurityStatus {
   trustedDeviceCount: number;
   totpEnabled: boolean;
   walletPinSet: boolean;
+  walletPasskeySet: boolean;
+  walletLockSet: boolean;
   walletUnlocked: boolean;
   requiresDeviceVerification: boolean;
   canVerifyNewDevice: boolean;
-  encryptionNote: string;
+  totpRequiredForDeviceVerify?: boolean;
 }
 
 export async function fetchSecurityStatus(): Promise<SecurityStatus> {
@@ -26,11 +28,11 @@ export async function requestDeviceEmailOtp(): Promise<void> {
   }
 }
 
-export async function verifyNewDevice(emailCode: string, totpCode: string): Promise<void> {
+export async function verifyNewDevice(emailCode: string, totpCode?: string): Promise<void> {
   const res = await apiFetch("/api/security/device/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ emailCode, totpCode }),
+    body: JSON.stringify({ emailCode, totpCode: totpCode?.trim() || undefined }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { error?: string };
@@ -67,7 +69,7 @@ export async function setWalletPin(pin: string, totpCode?: string): Promise<void
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { error?: string };
-    throw new Error(err.error ?? "Could not set wallet password");
+    throw new Error(err.error ?? "Could not set wallet lock");
   }
 }
 
@@ -79,7 +81,7 @@ export async function verifyWalletPin(pin: string): Promise<void> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { error?: string; code?: string };
-    const e = new Error(err.error ?? "Incorrect wallet password") as Error & { code?: string };
+    const e = new Error(err.error ?? "Incorrect PIN or password") as Error & { code?: string };
     e.code = err.code;
     throw e;
   }
@@ -87,4 +89,24 @@ export async function verifyWalletPin(pin: string): Promise<void> {
 
 export async function lockWallet(): Promise<void> {
   await apiFetch("/api/security/wallet-pin/lock", { method: "POST" });
+}
+
+export async function requestWalletPinResetOtp(): Promise<void> {
+  const res = await apiFetch("/api/security/wallet-pin/request-reset-otp", { method: "POST" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error ?? "Could not send reset code");
+  }
+}
+
+export async function resetWalletPin(emailCode: string, pin: string): Promise<void> {
+  const res = await apiFetch("/api/security/wallet-pin/reset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ emailCode, pin }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error ?? "Could not reset wallet lock");
+  }
 }

@@ -7,6 +7,7 @@ import {
 import { creatorShareForVerified } from "./creatorShare";
 import { verifiedAtPublishForContent } from "./contentPublishSnapshot";
 import { logger } from "./logger";
+import { createUserNotification } from "./notifications";
 import {
   ensureContentRegisteredOnChain,
   executeAtomicContentSplit,
@@ -234,6 +235,14 @@ async function finalizeSplit(
       amountPaid: Number(payment.amount),
       creatorReceives: Number(payment.creatorAmount),
     });
+    void notifyPaymentInApp({
+      readerId: input.readerId,
+      creatorId: input.content.creatorId,
+      contentId: input.contentId,
+      contentTitle: input.content.title,
+      amountPaid: Number(payment.amount),
+      creatorReceives: Number(payment.creatorAmount),
+    });
   }
 
   if (!hadSplit && splitPending && payment.txHash) {
@@ -366,6 +375,37 @@ export function toUnlockResult(result: RecordPaymentResult) {
     }),
     settlementNetwork: result.txHash || result.splitTxHash ? "arc-testnet" : null,
   };
+}
+
+async function notifyPaymentInApp(input: {
+  readerId: string;
+  creatorId: string;
+  contentId: number;
+  contentTitle: string;
+  amountPaid: number;
+  creatorReceives: number;
+}): Promise<void> {
+  try {
+    const amount = input.amountPaid.toFixed(input.amountPaid < 0.01 ? 4 : 2);
+    await createUserNotification({
+      userId: input.readerId,
+      type: "unlock",
+      message: `Unlocked "${input.contentTitle}" · $${amount} USDC`,
+      link: `/content/${input.contentId}`,
+    });
+
+    if (input.creatorId !== input.readerId && input.creatorId !== "system") {
+      const earned = input.creatorReceives.toFixed(input.creatorReceives < 0.01 ? 4 : 2);
+      await createUserNotification({
+        userId: input.creatorId,
+        type: "sale",
+        message: `New unlock · "${input.contentTitle}" · $${earned} USDC`,
+        link: "/earnings",
+      });
+    }
+  } catch (err) {
+    logger.warn({ err }, "In-app payment notification failed");
+  }
 }
 
 async function notifyPaymentEmails(input: {

@@ -29,7 +29,8 @@ export function getSettlementRailInfo(): SettlementRailInfo {
     creatorShareBps: 9500,
     flow: [
       "Reader pays via Circle Gateway (x402)",
-      "USDC settles to LeptonSplit on Arc",
+      "Revenue accrues to platform Gateway balance",
+      "USDC withdraws to LeptonSplit on Arc",
       "splitPayment sends 95% to creator wallet (100% if verified at publish)",
       "Access to read again stays in your Collection — off-chain",
     ],

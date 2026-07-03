@@ -26,10 +26,15 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
   void validateSettlementConfig();
   void import("./lib/blobStorage").then(({ blobStorageEnabled, getBlobStoreId }) => {
-    if (blobStorageEnabled()) {
-      logger.info({ storeId: getBlobStoreId() ?? "unknown" }, "Media uploads: Vercel Blob");
-    } else {
-      logger.info("Media uploads: local disk (set BLOB_READ_WRITE_TOKEN for Vercel Blob)");
-    }
+    void import("./lib/cloudinaryStorage").then(async ({ cloudinaryEnabled, pingCloudinary }) => {
+      if (cloudinaryEnabled()) {
+        const ok = await pingCloudinary();
+        logger.info({ ok }, ok ? "Media uploads: Cloudinary (primary)" : "Media uploads: Cloudinary configured but ping failed");
+      } else if (blobStorageEnabled()) {
+        logger.info({ storeId: getBlobStoreId() ?? "unknown" }, "Media uploads: Vercel Blob");
+      } else {
+        logger.info("Media uploads: local disk");
+      }
+    });
   });
 });

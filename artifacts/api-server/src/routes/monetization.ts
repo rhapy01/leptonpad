@@ -6,7 +6,14 @@ import {
   tipsTable,
   adCampaignsTable,
   adImpressionsTable,
+  adSubmissionsTable,
 } from "@workspace/db";
+import {
+  AD_BANNER_REQUIREMENTS,
+  fetchLiveFeedAds,
+} from "../lib/adCampaigns";
+import { parseAdSubmissionBody, resolveAdBannerImageUrl } from "../lib/adSubmission";
+import { writeRateLimit } from "../middlewares/rateLimit";
 import {
   formatGatewayPrice,
   isMockPayments,
@@ -258,26 +265,62 @@ router.get("/creators/:creatorId/tips", async (req, res): Promise<void> => {
 
 // ─── Ads (platform revenue share — optional discovery monetization) ──────────
 
+router.get("/ads/requirements", (_req, res): void => {
+  res.json(AD_BANNER_REQUIREMENTS);
+});
+
+router.post("/ads/submit", writeRateLimit, async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  const parsed = parseAdSubmissionBody(req.body as Record<string, unknown>);
+  if (!parsed.ok) {
+    res.status(400).json({ error: parsed.error });
+    return;
+  }
+
+  const image = await resolveAdBannerImageUrl(
+    parsed.data,
+    userId ?? `guest:${parsed.data.contactEmail}`,
+  );
+  if (!image.ok) {
+    res.status(400).json({ error: image.error });
+    return;
+  }
+
+  const [created] = await db
+    .insert(adSubmissionsTable)
+    .values({
+      submitterUserId: userId ?? null,
+      contactName: parsed.data.contactName ?? null,
+      contactEmail: parsed.data.contactEmail,
+      businessName: parsed.data.businessName,
+      headline: parsed.data.headline,
+      targetUrl: parsed.data.targetUrl,
+      imageUrl: image.url,
+      durationDays: parsed.data.durationDays,
+      categorySlug: parsed.data.categorySlug,
+      status: "pending",
+    })
+    .returning();
+
+  res.status(201).json({
+    id: created.id,
+    status: created.status,
+    message: "Thanks! Your ad was submitted for review.",
+  });
+});
+
 router.get("/ads/feed", async (req, res): Promise<void> => {
   const category = req.query.category as string | undefined;
-  const rows = await db
-    .select()
-    .from(adCampaignsTable)
-    .where(eq(adCampaignsTable.active, true))
-    .orderBy(sql`random()`)
-    .limit(3);
-
-  const filtered = category
-    ? rows.filter((r) => !r.categorySlug || r.categorySlug === category)
-    : rows;
+  const rows = await fetchLiveFeedAds(category);
 
   res.json(
-    filtered.map((a) => ({
+    rows.map((a) => ({
       id: a.id,
       title: a.title,
       advertiser: a.advertiser,
       imageUrl: a.imageUrl,
       targetUrl: a.targetUrl,
+      expiresAt: a.expiresAt?.toISOString() ?? null,
     })),
   );
 });

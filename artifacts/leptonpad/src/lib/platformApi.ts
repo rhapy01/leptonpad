@@ -212,6 +212,10 @@ export function markAllNotificationsRead() {
   return api<{ ok: boolean }>("/social/notifications/read-all", { method: "POST" });
 }
 
+export function markNotificationRead(id: number) {
+  return api<{ ok: boolean }>(`/social/notifications/${id}/read`, { method: "POST" });
+}
+
 export function saveReadingProgress(contentId: number, data: { progressPct: number; scrollPosition: number; completed?: boolean }) {
   return api<{ ok: boolean }>(`/social/reading-progress/${contentId}`, {
     method: "PUT",
@@ -373,16 +377,89 @@ export function aiSuggestTags(title: string, body: string) {
 
 // ─── Monetization (ads) ──────────────────────────────────────────────────────
 
-export type AdCampaign = { id: number; title: string; advertiser: string; imageUrl: string | null; targetUrl: string };
+export type AdCampaign = {
+  id: number;
+  title: string;
+  advertiser: string;
+  imageUrl: string | null;
+  targetUrl: string;
+  expiresAt?: string | null;
+};
+
+export type AdBannerRequirements = {
+  headline: string;
+  businessName: string;
+  targetUrl: string;
+  image: {
+    formats: string[];
+    formatLabels: string;
+    maxBytes: number;
+    maxBytesLabel: string;
+    recommendedWidth: number;
+    recommendedHeight: number;
+    aspectRatio: string;
+  };
+  durations: Array<{ days: number; label: string }>;
+  review: string;
+};
+
+export function fetchAdRequirements() {
+  return api<AdBannerRequirements>("/monetization/ads/requirements");
+}
 
 export function fetchFeedAds(category?: string) {
   const q = category ? `?category=${encodeURIComponent(category)}` : "";
   return api<AdCampaign[]>(`/monetization/ads/feed${q}`);
 }
 
+export function submitAdApplication(body: {
+  contactName?: string;
+  contactEmail: string;
+  businessName: string;
+  headline?: string;
+  targetUrl: string;
+  durationDays: number;
+  categorySlug?: string;
+  imageData: string;
+  imageFilename: string;
+  imageMimeType: string;
+}) {
+  return api<{ id: number; status: string; message: string }>("/monetization/ads/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export function trackAdImpression(id: number, clicked = false) {
   return api<{ ok: boolean }>(`/monetization/ads/${id}/impression`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clicked }),
+  });
+}
+
+export type CreatorGiftResult = {
+  id: number;
+  amount: number;
+  creatorAmount: number;
+  creatorShare: string;
+  verified: boolean;
+  toCreatorId: string;
+  message: string | null;
+  txHash: string | null;
+  splitTxHash: string | null;
+  settledAt: string;
+};
+
+export function giftCreator(input: {
+  toCreatorId: string;
+  amount: number;
+  contentId: number;
+  message?: string;
+}) {
+  return api<CreatorGiftResult>("/monetization/tips-app", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
   });
 }
 

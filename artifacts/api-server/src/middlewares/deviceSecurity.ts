@@ -8,6 +8,7 @@ import {
   countTrustedDevices,
 } from "../lib/deviceTrust";
 import { isWalletUnlocked } from "../lib/walletSession";
+import { countWalletPasskeys } from "../lib/walletPasskey";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -67,17 +68,18 @@ export async function requireWalletUnlock(
     .where(eq(usersTable.clerkId, userId))
     .limit(1);
 
-  if (!user?.walletPinHash) {
+  const passkeySet = (await countWalletPasskeys(userId)) > 0;
+  if (!user?.walletPinHash && !passkeySet) {
     res.status(403).json({
-      error: "Set a wallet password in Security settings first",
-      code: "WALLET_PIN_NOT_SET",
+      error: "Set a wallet lock in Security settings first (PIN, password, or passkey)",
+      code: "WALLET_LOCK_NOT_SET",
     });
     return;
   }
 
   if (!isWalletUnlocked(req, userId)) {
     res.status(403).json({
-      error: "Enter your wallet password to continue",
+      error: "Unlock your wallet to continue",
       code: "WALLET_LOCKED",
     });
     return;

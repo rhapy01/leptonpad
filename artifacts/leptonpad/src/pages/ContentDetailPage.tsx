@@ -14,6 +14,7 @@ import { PlatformLayout } from "@/components/PlatformLayout";
 import { ContentCover } from "@/components/ContentCover";
 import { SeoHead } from "@/components/SeoHead";
 import { ContentEngagement } from "@/components/ContentEngagement";
+import { GiftArticlePanel } from "@/components/GiftArticlePanel";
 import { CreatorName } from "@/components/CreatorName";
 import { useAppWallet } from "@/hooks/useAppWallet";
 import { useAuthReady } from "@/hooks/useAuthReady";
@@ -34,7 +35,7 @@ export default function ContentDetailPage({ id }: { id: number }) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { authReady, isSignedIn } = useAuthReady();
-  const { wallet, activating, ensureReady } = useAppWallet();
+  const { activating, ensureReady } = useAppWallet();
   const [unlocking, setUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
   const [settlementTx, setSettlementTx] = useState<string | null>(null);
@@ -168,7 +169,6 @@ export default function ContentDetailPage({ id }: { id: number }) {
   }
 
   const coverImageUrl = content.coverImageUrl ?? null;
-  const creatorVerifiedAtPublish = (content as { creatorVerifiedAtPublish?: boolean | null }).creatorVerifiedAtPublish;
   const isFree = Number(content.price) === 0;
   const hasAccess = access?.hasAccess || isFree || content.hasAccess;
   const accessPending =
@@ -176,7 +176,7 @@ export default function ContentDetailPage({ id }: { id: number }) {
 
   return (
     <PlatformLayout>
-      <SeoHead meta={seoMeta ? { title: seoMeta.title, description: seoMeta.description, canonicalUrl: seoMeta.canonicalUrl, image: seoMeta.og?.image as string } : null} />
+      <SeoHead meta={seoMeta ? { title: seoMeta.title, description: seoMeta.description, canonicalUrl: seoMeta.canonicalUrl, image: (seoMeta.og?.image ?? seoMeta.image) as string } : null} />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
 
         {/* Back link */}
@@ -334,19 +334,17 @@ export default function ContentDetailPage({ id }: { id: number }) {
             <p style={{ fontSize: "0.875rem", color: "#78716C", marginBottom: "20px" }}>
               {isFree ? "Free to read — no account required." : "You have access to this piece."}
             </p>
-            {(splitTx || settlementTx || access?.paymentId) && (
+            {(splitTx || settlementTx) && (
               <p style={{ fontSize: "11px", color: "#78716C", marginBottom: "16px" }}>
                 {splitTx && arcTxExplorerUrl(splitTx) ? (
                   <a href={arcTxExplorerUrl(splitTx)!} target="_blank" rel="noopener noreferrer" style={{ color: "#C8960C" }}>
-                    View on-chain split on Arc →
+                    View receipt →
                   </a>
                 ) : settlementTx && arcTxExplorerUrl(settlementTx) ? (
                   <a href={arcTxExplorerUrl(settlementTx)!} target="_blank" rel="noopener noreferrer" style={{ color: "#C8960C" }}>
-                    View x402 settlement on Arc →
+                    View receipt →
                   </a>
-                ) : (
-                  "Paid via LeptonSplit on Arc"
-                )}
+                ) : null}
               </p>
             )}
             {content.type === "article" && (
@@ -403,9 +401,6 @@ export default function ContentDetailPage({ id }: { id: number }) {
             >
               ${Number(content.price).toFixed(Number(content.price) < 0.01 ? 6 : 2)}
             </p>
-            <p className="editorial-label mb-8" style={{ color: "#78716C" }}>
-              USDC · LeptonPad wallet · Arc · x402 Gateway
-            </p>
 
             <Show when="signed-out">
               <div className="flex flex-col items-center gap-3">
@@ -423,13 +418,6 @@ export default function ContentDetailPage({ id }: { id: number }) {
             </Show>
 
             <Show when="signed-in">
-              {wallet?.address && (
-                <p style={{ fontSize: "11px", color: "#78716C", marginBottom: "12px", fontFamily: "monospace" }}>
-                  LeptonPad wallet {wallet.address.slice(0, 6)}…{wallet.address.slice(-4)}
-                  {wallet.gatewayAvailable != null && ` · ${wallet.gatewayAvailable} USDC in Gateway`}
-                </p>
-              )}
-
               <button
                 onClick={() => void handleUnlock()}
                 disabled={unlocking || activating}
@@ -440,14 +428,10 @@ export default function ContentDetailPage({ id }: { id: number }) {
                 onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "#1C1917"; }}
               >
                 {unlocking || activating
-                  ? "Settling on Arc…"
-                  : `Pay $${Number(content.price).toFixed(Number(content.price) < 0.01 ? 6 : 2)} USDC`}
+                  ? "Unlocking…"
+                  : `Unlock for $${Number(content.price).toFixed(Number(content.price) < 0.01 ? 6 : 2)}`}
               </button>
             </Show>
-
-            <p style={{ fontSize: "11px", color: "#78716C", marginTop: "16px" }}>
-              {(creatorVerifiedAtPublish ?? false) ? "100%" : "95%"} goes directly to {content.creatorName}. Settled via Circle Gateway in under 500ms.
-            </p>
 
             {unlockError && (
               <p style={{ color: "#DC2626", fontSize: "0.875rem", marginTop: "12px" }}>{unlockError}</p>
@@ -455,7 +439,15 @@ export default function ContentDetailPage({ id }: { id: number }) {
           </div>
         )}
 
-        <ContentEngagement contentId={id} creatorId={content.creatorId} />
+        {hasAccess && isFree && me?.clerkId !== content.creatorId && (
+          <GiftArticlePanel
+            contentId={id}
+            creatorId={content.creatorId}
+            creatorName={content.creatorName}
+          />
+        )}
+
+        <ContentEngagement contentId={id} contentTitle={content.title} creatorId={content.creatorId} />
       </div>
     </PlatformLayout>
   );

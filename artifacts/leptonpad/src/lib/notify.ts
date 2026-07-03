@@ -115,3 +115,15 @@ export function notifyWalletActionFailed(
   };
   error({ title: labels[action], description: message });
 }
+
+export function notifyGiftSuccess(input: {
+  creatorName: string;
+  amount: number;
+  creatorShare: string;
+}) {
+  const amount = Number(input.amount).toFixed(input.amount < 0.01 ? 4 : 2);
+  success({
+    title: "Gift sent",
+    description: `$${amount} USDC gifted to ${input.creatorName} (${input.creatorShare} to creator).`,
+  });
+}

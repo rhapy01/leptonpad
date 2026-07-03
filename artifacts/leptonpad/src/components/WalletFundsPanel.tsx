@@ -139,7 +139,7 @@ export function WalletFundsPanel({ variant = "full" }: Props) {
             </h2>
             <p className="text-xs mt-1 max-w-lg" style={{ color: "#78716C" }}>
           {wallet.clientSide
-            ? "Private keys are encrypted in your browser (IndexedDB). They do not sync when you change devices."
+            ? "This wallet stays on this device only."
             : variant === "embedded"
               ? "Your wallet is tied to your account — sign in anywhere to spend. Deposit to Gateway to unlock paid content."
               : "Your wallet follows your LeptonPad account. Gateway is for in-app spending; on-chain is where earnings arrive."}

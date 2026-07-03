@@ -16,6 +16,10 @@ import { leptonSplitAbi } from "../contracts/leptonSplitAbi";
 import { arcTestnet } from "./arcChain";
 import { provisionUserWallet, deriveWalletAddress } from "./appWallet";
 import { isMockPayments } from "./gateway";
+import {
+  fundLeptonSplitFromGateway,
+  fundLeptonSplitFromSellerWallet,
+} from "./gatewaySellerFunding";
 import { logger } from "./logger";
 import { SettlementIncompleteError, CreatorWalletRequiredError, type CreatorVerifyOnChainSync } from "./settlementErrors";
 import { isSystemCreator } from "./systemCreator";
@@ -29,7 +33,7 @@ export function getPlatformWalletAddress(): Address | null {
   return addr ? (addr as Address) : null;
 }
 
-/** x402 payTo / Gateway seller — the LeptonSplit contract on Arc testnet. */
+/** LeptonSplit contract on Arc — holds USDC briefly before splitPayment disburses shares. */
 export function getSplitContractAddress(): Address | null {
   const addr = process.env.LEPTON_SPLIT_CONTRACT ?? process.env.GATEWAY_SELLER_ADDRESS;
   return addr ? (addr as Address) : null;
@@ -85,6 +89,9 @@ function isRetryableSplitError(message: string): boolean {
 
   return (
     lower.includes("insufficient balance") ||
+    lower.includes("waiting for gateway") ||
+    lower.includes("batch settlement") ||
+    lower.includes("gateway available") ||
     lower.includes("timeout") ||
     lower.includes("timed out") ||
     lower.includes("network") ||
@@ -469,11 +476,33 @@ async function runSplitWithRetries(input: {
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const balance = await publicClient.readContract({
+      let balance = await publicClient.readContract({
         address: contract,
         abi: leptonSplitAbi,
         functionName: "contractBalance",
       });
+
+      if (balance < amount) {
+        const gatewayFund = await fundLeptonSplitFromGateway(input.amountUsdc);
+        if (gatewayFund.funded) {
+          balance = await publicClient.readContract({
+            address: contract,
+            abi: leptonSplitAbi,
+            functionName: "contractBalance",
+          });
+        } else if (gatewayFund.reason) {
+          const backfilled = await fundLeptonSplitFromSellerWallet(input.amountUsdc);
+          if (backfilled) {
+            balance = await publicClient.readContract({
+              address: contract,
+              abi: leptonSplitAbi,
+              functionName: "contractBalance",
+            });
+          } else {
+            throw new Error(gatewayFund.reason);
+          }
+        }
+      }
 
       if (balance < amount) {
         throw new Error(`contract balance ${balance} < ${amount} (waiting for Gateway batch credit)`);
@@ -525,8 +554,8 @@ async function runSplitWithRetries(input: {
 }
 
 /**
- * Atomically split USDC held by LeptonSplit after x402 Gateway credits the contract.
- * Retries while Gateway batch settlement is landing on-chain.
+ * Atomically split USDC on LeptonSplit after Gateway earnings are withdrawn to the contract.
+ * Retries while Gateway batch settlement is landing and funds are moved on-chain.
  */
 export async function executeAtomicContentSplit(
   contentId: number,

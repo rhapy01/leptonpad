@@ -49,13 +49,7 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       title={title}
-      className="px-2 py-1 rounded text-xs font-medium transition-colors"
-      style={{
-        background: active ? "rgba(28,25,23,0.12)" : "transparent",
-        color: active ? "#1C1917" : "#78716C",
-        border: "none",
-        cursor: "pointer",
-      }}
+      className={`tiptap-toolbar-btn${active ? " tiptap-toolbar-btn--active" : ""}`}
     >
       {children}
     </button>
@@ -123,19 +117,8 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
   };
 
   return (
-    <div
-      style={{
-        border: "1px solid rgba(28,25,23,0.15)",
-        borderRadius: "2px",
-        background: "#FFFFFF",
-        overflow: "hidden",
-      }}
-    >
-      {/* Toolbar */}
-      <div
-        className="flex flex-wrap items-center gap-0.5 px-3 py-2"
-        style={{ borderBottom: "1px solid rgba(28,25,23,0.1)", background: "#ffffff" }}
-      >
+    <div className="tiptap-editor-shell">
+      <div className="tiptap-editor-toolbar">
         <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Bold">
           <strong>B</strong>
         </ToolbarButton>
@@ -146,7 +129,7 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
           <span style={{ textDecoration: "underline" }}>U</span>
         </ToolbarButton>
 
-        <span style={{ width: "1px", height: "16px", background: "rgba(28,25,23,0.12)", margin: "0 4px" }} />
+        <span className="tiptap-toolbar-divider" />
 
         <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} title="Heading 2">
           H2
@@ -155,7 +138,7 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
           H3
         </ToolbarButton>
 
-        <span style={{ width: "1px", height: "16px", background: "rgba(28,25,23,0.12)", margin: "0 4px" }} />
+        <span className="tiptap-toolbar-divider" />
 
         <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Bullet list">
           • List
@@ -164,7 +147,7 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
           1. List
         </ToolbarButton>
 
-        <span style={{ width: "1px", height: "16px", background: "rgba(28,25,23,0.12)", margin: "0 4px" }} />
+        <span className="tiptap-toolbar-divider" />
 
         <ToolbarButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} title="Quote">
           "
@@ -173,7 +156,7 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
           —
         </ToolbarButton>
 
-        <span style={{ width: "1px", height: "16px", background: "rgba(28,25,23,0.12)", margin: "0 4px" }} />
+        <span className="tiptap-toolbar-divider" />
 
         <input
           ref={imageInputRef}
@@ -190,7 +173,7 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
           🖼
         </ToolbarButton>
 
-        <span style={{ width: "1px", height: "16px", background: "rgba(28,25,23,0.12)", margin: "0 4px" }} />
+        <span className="tiptap-toolbar-divider" />
 
         <ToolbarButton onClick={() => editor.chain().focus().undo().run()} title="Undo">
           ↩
@@ -200,7 +183,6 @@ export function TipTapEditor({ value, onChange, placeholder }: TipTapEditorProps
         </ToolbarButton>
       </div>
 
-      {/* Editor body */}
       <EditorContent editor={editor} />
     </div>
   );

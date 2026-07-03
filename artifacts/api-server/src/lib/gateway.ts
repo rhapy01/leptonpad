@@ -34,7 +34,7 @@ export function isMockPayments(): boolean {
 
 export function getPaymentConfig(): PaymentConfig {
   const sellerAddress =
-    process.env.LEPTON_SPLIT_CONTRACT ?? process.env.GATEWAY_SELLER_ADDRESS ?? null;
+    process.env.GATEWAY_SELLER_ADDRESS ?? process.env.PLATFORM_WALLET_ADDRESS ?? null;
   const mockMode = isMockPayments();
 
   return {
@@ -80,8 +80,8 @@ export function getGatewayMiddleware() {
 }
 
 /**
- * x402 Gateway middleware — price and seller (LeptonSplit contract) resolved per request.
- * USDC settles on Arc to the split contract via Circle Gateway batching.
+ * x402 Gateway middleware — price and seller (platform EOA) resolved per request.
+ * USDC accrues in the seller's Gateway balance; the API withdraws to LeptonSplit before splitPayment.
  */
 export function requireGatewaySettlement(
   resolve: (req: Request) => Promise<{ price: string; sellerAddress: string } | null>,

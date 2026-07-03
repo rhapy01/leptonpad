@@ -7,20 +7,78 @@ import {
 } from "@workspace/api-zod";
 import { provisionUserWallet, reconcileWalletAddress } from "../lib/appWallet";
 import { validateOptionalUrl } from "../lib/validateUrl";
+import {
+  parseInitialAdminEmails,
+  extractClerkProfile,
+  clerkMatchesAdminAllowlist,
+  emailMatchesAdminAllowlist,
+} from "../lib/clerkUserProfile";
 
 const router = Router();
 
-const INITIAL_ADMIN_EMAILS = (process.env.INITIAL_ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
+const INITIAL_ADMIN_EMAILS = parseInitialAdminEmails(process.env.INITIAL_ADMIN_EMAILS);
 
 async function promoteAdminIfConfigured(user: typeof usersTable.$inferSelect) {
-  if (!user.email || user.isAdmin) return user;
-  if (!INITIAL_ADMIN_EMAILS.includes(user.email.toLowerCase())) return user;
+  if (user.isAdmin) return user;
+  if (emailMatchesAdminAllowlist(user.email, INITIAL_ADMIN_EMAILS)) {
+    const [updated] = await db
+      .update(usersTable)
+      .set({ isAdmin: true })
+      .where(eq(usersTable.clerkId, user.clerkId))
+      .returning();
+    return updated ?? user;
+  }
+
+  try {
+    const clerkUser = await clerkClient.users.getUser(user.clerkId);
+    const profile = extractClerkProfile(clerkUser);
+    if (!clerkMatchesAdminAllowlist(profile, INITIAL_ADMIN_EMAILS)) return user;
+    const [updated] = await db
+      .update(usersTable)
+      .set({ isAdmin: true })
+      .where(eq(usersTable.clerkId, user.clerkId))
+      .returning();
+    return updated ?? user;
+  } catch {
+    return user;
+  }
+}
+
+async function syncUserFromClerk(
+  user: typeof usersTable.$inferSelect,
+  clerkUser: Awaited<ReturnType<typeof clerkClient.users.getUser>>,
+) {
+  const profile = extractClerkProfile(clerkUser);
+  const patch: Partial<typeof usersTable.$inferInsert> = {};
+
+  if (profile.name && profile.name !== user.name) patch.name = profile.name;
+  if (profile.imageUrl !== user.imageUrl) patch.imageUrl = profile.imageUrl;
+
+  const shouldBeAdmin =
+    user.isAdmin || clerkMatchesAdminAllowlist(profile, INITIAL_ADMIN_EMAILS);
+  if (shouldBeAdmin && !user.isAdmin) patch.isAdmin = true;
+
+  const nextEmail = profile.primaryEmail || user.email;
+  if (
+    nextEmail &&
+    nextEmail !== user.email.toLowerCase() &&
+    !nextEmail.endsWith("@users.leptonpad.local")
+  ) {
+    const [conflict] = await db
+      .select({ clerkId: usersTable.clerkId })
+      .from(usersTable)
+      .where(eq(usersTable.email, nextEmail))
+      .limit(1);
+    if (!conflict || conflict.clerkId === user.clerkId) {
+      patch.email = nextEmail;
+    }
+  }
+
+  if (Object.keys(patch).length === 0) return user;
+
   const [updated] = await db
     .update(usersTable)
-    .set({ isAdmin: true })
+    .set(patch)
     .where(eq(usersTable.clerkId, user.clerkId))
     .returning();
   return updated ?? user;
@@ -28,45 +86,39 @@ async function promoteAdminIfConfigured(user: typeof usersTable.$inferSelect) {
 
 // JIT provision helper
 async function getOrCreateUser(clerkId: string) {
+  const clerkUser = await clerkClient.users.getUser(clerkId);
+  const profile = extractClerkProfile(clerkUser);
+  const email =
+    profile.primaryEmail || `noemail+${clerkId}@users.leptonpad.local`;
+  const { name, imageUrl } = profile;
+
   const existing = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkId)).limit(1);
   if (existing.length > 0) {
-    const user = existing[0];
-    const promoted = await promoteAdminIfConfigured(user);
+    const synced = await syncUserFromClerk(existing[0], clerkUser);
+    const promoted = await promoteAdminIfConfigured(synced);
     if (!promoted.walletAddress) {
       return provisionUserWallet(clerkId);
     }
     return promoted;
   }
 
-  // Fetch from Clerk
-  const clerkUser = await clerkClient.users.getUser(clerkId);
-  const primaryEmail =
-    clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ??
-    clerkUser.emailAddresses[0]?.emailAddress ??
-    "";
-  const email = primaryEmail.trim().toLowerCase() || `noemail+${clerkId}@users.leptonpad.local`;
-  const name =
-    `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
-    clerkUser.username ||
-    email.split("@")[0] ||
-    "Anonymous";
-  const imageUrl = clerkUser.imageUrl ?? null;
-
-  // Same email, new Clerk user id (re-sign-up / new dev instance) — relink instead of failing unique constraint.
-  if (primaryEmail) {
+  // Same email, new Clerk user id (re-sign-up / OAuth vs email) — relink instead of failing unique constraint.
+  if (profile.primaryEmail) {
     const byEmail = await db
       .select()
       .from(usersTable)
       .where(eq(usersTable.email, email))
       .limit(1);
     if (byEmail.length > 0) {
+      const shouldBeAdmin =
+        byEmail[0].isAdmin || clerkMatchesAdminAllowlist(profile, INITIAL_ADMIN_EMAILS);
       const [relinked] = await db
         .update(usersTable)
         .set({
           clerkId,
           name,
           imageUrl,
-          isAdmin: byEmail[0].isAdmin || INITIAL_ADMIN_EMAILS.includes(email),
+          isAdmin: shouldBeAdmin,
         })
         .where(eq(usersTable.email, email))
         .returning();
@@ -76,7 +128,38 @@ async function getOrCreateUser(clerkId: string) {
       }
       return promoted;
     }
+
+    // Any allowlisted email on this Clerk account (e.g. secondary email) — relink existing row.
+    for (const altEmail of profile.allEmails) {
+      if (altEmail === email) continue;
+      if (!emailMatchesAdminAllowlist(altEmail, INITIAL_ADMIN_EMAILS)) continue;
+      const [byAlt] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, altEmail))
+        .limit(1);
+      if (byAlt.length > 0) {
+        const [relinked] = await db
+          .update(usersTable)
+          .set({
+            clerkId,
+            name,
+            imageUrl,
+            email: profile.primaryEmail || byAlt[0].email,
+            isAdmin: true,
+          })
+          .where(eq(usersTable.email, altEmail))
+          .returning();
+        const promoted = await promoteAdminIfConfigured(relinked);
+        if (!promoted.walletAddress) {
+          return provisionUserWallet(clerkId);
+        }
+        return promoted;
+      }
+    }
   }
+
+  const isAdmin = clerkMatchesAdminAllowlist(profile, INITIAL_ADMIN_EMAILS);
 
   try {
     const [user] = await db
@@ -88,13 +171,13 @@ async function getOrCreateUser(clerkId: string) {
         imageUrl,
         selectedCategories: [],
         onboardingComplete: false,
-        isAdmin: INITIAL_ADMIN_EMAILS.includes(email),
+        isAdmin,
       })
       .returning();
 
-    if (primaryEmail) {
+    if (profile.primaryEmail) {
       const { sendWelcomeEmail } = await import("../lib/email");
-      sendWelcomeEmail(primaryEmail, name);
+      sendWelcomeEmail(profile.primaryEmail, name);
     }
 
     return provisionUserWallet(clerkId);
@@ -107,7 +190,7 @@ async function getOrCreateUser(clerkId: string) {
       if (byEmail.length > 0) {
         const [relinked] = await db
           .update(usersTable)
-          .set({ clerkId, name, imageUrl })
+          .set({ clerkId, name, imageUrl, isAdmin: byEmail[0].isAdmin || isAdmin })
           .where(eq(usersTable.email, email))
           .returning();
         if (!relinked.walletAddress) {

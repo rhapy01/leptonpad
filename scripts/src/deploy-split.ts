@@ -132,9 +132,9 @@ Deploy tx: ${hash}
 Add to your .env:
 
 LEPTON_SPLIT_CONTRACT=${contractAddress}
-GATEWAY_SELLER_ADDRESS=${contractAddress}
+GATEWAY_SELLER_ADDRESS=${platformWallet}
 
-x402 payments now settle to the split contract on Arc.
+x402 seller is the platform wallet; unlock revenue withdraws to LeptonSplit before splitPayment.
 `);
 }
 

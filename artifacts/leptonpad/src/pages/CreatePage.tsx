@@ -16,6 +16,7 @@ import { createContentExtended } from "@/lib/platformApi";
 import { AiWritingPanel } from "@/components/AiWritingPanel";
 import { FileUploadField } from "@/components/FileUploadField";
 import { useI18n } from "@/lib/i18n";
+import { useToast } from "@/hooks/use-toast";
 
 const createSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -41,12 +42,13 @@ type CreateForm = z.infer<typeof createSchema>;
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: "10px 14px",
+  padding: "12px 16px",
   border: "1px solid rgba(28,25,23,0.18)",
   borderRadius: "2px",
   background: "#FFFFFF",
   color: "#1C1917",
-  fontSize: "0.9375rem",
+  fontSize: "1.0625rem",
+  lineHeight: 1.75,
   fontFamily: "'Lora', Georgia, serif",
   outline: "none",
   transition: "border-color 0.15s",
@@ -67,13 +69,13 @@ export default function CreatePage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { t } = useI18n();
+  const { toast } = useToast();
   const [aiSuggestion, setAiSuggestion] = useState<{ suggestedPrice: number; action: string; reasoning: string } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [markdownMode, setMarkdownMode] = useState(false);
   const [tags, setTags] = useState("");
   const [publishMode, setPublishMode] = useState<"now" | "draft" | "schedule">("now");
   const [scheduledAt, setScheduledAt] = useState("");
-  const [country, setCountry] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastAutosave, setLastAutosave] = useState<Date | null>(null);
@@ -146,13 +148,36 @@ export default function CreatePage() {
         status,
         published: status === "published",
         scheduledAt: publishMode === "schedule" && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
-        country: country || undefined,
         metaDescription: metaDescription || undefined,
       }) as { id: number };
       localStorage.removeItem(AUTOSAVE_KEY);
       queryClient.invalidateQueries({ queryKey: getListContentQueryKey() });
-      if (status === "draft") setLocation("/dashboard/creator");
-      else setLocation(`/content/${result.id}`);
+
+      const redirectDelayMs = 1600;
+      if (status === "draft") {
+        toast({
+          title: "Draft saved",
+          description: "Your piece is in your creator dashboard.",
+          variant: "success",
+        });
+        window.setTimeout(() => setLocation("/dashboard/creator"), redirectDelayMs);
+      } else if (status === "scheduled") {
+        toast({
+          title: "Scheduled",
+          description: scheduledAt
+            ? `Goes live ${new Date(scheduledAt).toLocaleString()}.`
+            : "Your piece is scheduled to publish.",
+          variant: "success",
+        });
+        window.setTimeout(() => setLocation("/dashboard/creator"), redirectDelayMs);
+      } else {
+        toast({
+          title: "Published!",
+          description: "Your piece is live. Taking you there now…",
+          variant: "success",
+        });
+        window.setTimeout(() => setLocation(`/content/${result.id}`), redirectDelayMs);
+      }
     } catch {
       setSubmitError(true);
     } finally {
@@ -284,16 +309,10 @@ export default function CreatePage() {
             <input value={tags} onChange={e => setTags(e.target.value)} placeholder="AI, Africa, Architecture (comma-separated)" style={inputStyle} />
           </div>
 
-          {/* Country (regional discovery) */}
-          <div>
-            <label style={labelStyle}>Country / Region (optional)</label>
-            <input value={country} onChange={e => setCountry(e.target.value)} placeholder="Nigeria, Kenya, South Africa…" style={inputStyle} />
-          </div>
-
           {/* SEO */}
           <div>
             <label style={labelStyle}>SEO meta description (optional)</label>
-            <textarea value={metaDescription} onChange={e => setMetaDescription(e.target.value)} rows={2} style={{ ...inputStyle, resize: "none" }} placeholder="Shown in search results and social previews" />
+            <textarea value={metaDescription} onChange={e => setMetaDescription(e.target.value)} rows={4} className="prose-textarea" style={{ resize: "none" }} placeholder="Shown in search results and social previews" />
           </div>
 
           {/* Publish mode */}
@@ -352,10 +371,11 @@ export default function CreatePage() {
                 </p>
                 <textarea
                   {...form.register("previewText")}
-                  rows={3}
+                  rows={5}
                   placeholder="Hook your audience — a sentence or two that makes them want to read more…"
                   data-testid="textarea-preview"
-                  style={{ ...inputStyle, resize: "none", lineHeight: "1.6" }}
+                  className="prose-textarea"
+                  style={{ resize: "none" }}
                   onFocus={e => (e.currentTarget.style.borderColor = "#C8960C")}
                   onBlur={e => (e.currentTarget.style.borderColor = "rgba(28,25,23,0.18)")}
                 />

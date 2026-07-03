@@ -8,8 +8,8 @@ const MAX_PIN_LEN = 64;
 
 export function validateWalletPin(pin: string): string | null {
   const trimmed = pin.trim();
-  if (trimmed.length < MIN_PIN_LEN) return `Wallet password must be at least ${MIN_PIN_LEN} characters`;
-  if (trimmed.length > MAX_PIN_LEN) return `Wallet password must be at most ${MAX_PIN_LEN} characters`;
+  if (trimmed.length < MIN_PIN_LEN) return `Use at least ${MIN_PIN_LEN} characters for your PIN or password`;
+  if (trimmed.length > MAX_PIN_LEN) return `PIN or password must be at most ${MAX_PIN_LEN} characters`;
   return null;
 }
 

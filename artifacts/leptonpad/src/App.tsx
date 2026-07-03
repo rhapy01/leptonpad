@@ -29,6 +29,7 @@ import WalletPage from "@/pages/WalletPage";
 import RightsPage from "@/pages/RightsPage";
 import { AuthGate } from "@/components/AuthGate";
 import { DeviceVerificationGate } from "@/components/DeviceVerificationGate";
+import { InAppNotificationProvider } from "@/components/InAppNotificationProvider";
 import { ClerkApiAuthBridge } from "@/components/ClerkApiAuthBridge";
 import { useGetMe } from "@workspace/api-client-react";
 
@@ -271,12 +272,14 @@ function AppInner() {
       appearance={clerkAppearance}
     >
       <ClerkApiAuthBridge />
-      <ClerkQueryClientCacheInvalidator />
-      <ScrollToTop />
-      <TooltipProvider>
-        <Router />
-        <Toaster />
-      </TooltipProvider>
+      <InAppNotificationProvider>
+        <ClerkQueryClientCacheInvalidator />
+        <ScrollToTop />
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </InAppNotificationProvider>
     </ClerkProvider>
   );
 }
