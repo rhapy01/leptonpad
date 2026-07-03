@@ -27,10 +27,18 @@ export function getPublicBaseUrl(): string {
 export function absolutizePublicUrl(url: string | null | undefined, base = getPublicBaseUrl()): string | null {
   if (!url?.trim()) return null;
   const trimmed = url.trim();
-  if (trimmed.startsWith("https://")) return trimmed;
-  if (trimmed.startsWith("http://")) return trimmed.replace(/^http:\/\//i, "https://");
-  if (trimmed.startsWith("//")) return `https:${trimmed}`;
-  return `${base}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
+  if (trimmed.startsWith("https://")) return optimizeOgImage(trimmed);
+  if (trimmed.startsWith("http://")) return optimizeOgImage(trimmed.replace(/^http:\/\//i, "https://"));
+  if (trimmed.startsWith("//")) return optimizeOgImage(`https:${trimmed}`);
+  return optimizeOgImage(`${base}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`);
+}
+
+/** Twitter/X cards render best at 1200×630. */
+function optimizeOgImage(url: string): string {
+  if (url.includes("res.cloudinary.com") && url.includes("/upload/") && !url.includes("/upload/w_")) {
+    return url.replace("/upload/", "/upload/w_1200,h_630,c_fill,f_auto,q_auto/");
+  }
+  return url;
 }
 
 export function buildContentSeoFields(item: ContentSeoRow, base = getPublicBaseUrl()) {
@@ -96,6 +104,8 @@ export function renderContentShareHtml(
     ? `
     <meta property="og:image" content="${image}" />
     <meta property="og:image:secure_url" content="${image}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta name="twitter:image" content="${image}" />`
     : "";
 

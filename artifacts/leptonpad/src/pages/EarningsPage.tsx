@@ -14,6 +14,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardShell } from "@/components/DashboardShell";
 import { WalletFundsPanel } from "@/components/WalletFundsPanel";
+import { WalletUnlockGate } from "@/components/WalletUnlockGate";
 import { SettlementStatusBadge } from "@/components/SettlementStatusBadge";
 
 export default function EarningsPage() {
@@ -98,7 +99,9 @@ export default function EarningsPage() {
             }
           </div>
 
-          <WalletFundsPanel variant="embedded" />
+          <WalletUnlockGate>
+            <WalletFundsPanel variant="embedded" />
+          </WalletUnlockGate>
 
           {/* Content table + Recent payments side-by-side */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

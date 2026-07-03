@@ -368,33 +368,43 @@ router.put("/reading-progress/:contentId", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   const contentId = parseInt(req.params.contentId, 10);
+  if (!Number.isFinite(contentId)) {
+    res.status(400).json({ error: "Invalid content id" });
+    return;
+  }
+
   const { progressPct, scrollPosition, completed } = req.body as {
     progressPct?: number;
     scrollPosition?: number;
     completed?: boolean;
   };
 
-  const existing = await db.select().from(readingProgressTable)
-    .where(and(eq(readingProgressTable.userId, userId), eq(readingProgressTable.contentId, contentId))).limit(1);
+  try {
+    const existing = await db.select().from(readingProgressTable)
+      .where(and(eq(readingProgressTable.userId, userId), eq(readingProgressTable.contentId, contentId))).limit(1);
 
-  if (existing.length) {
-    await db.update(readingProgressTable)
-      .set({
-        progressPct: progressPct ?? existing[0].progressPct,
-        scrollPosition: scrollPosition ?? existing[0].scrollPosition,
-        completed: completed ?? existing[0].completed,
-      })
-      .where(eq(readingProgressTable.id, existing[0].id));
-  } else {
-    await db.insert(readingProgressTable).values({
-      userId,
-      contentId,
-      progressPct: progressPct ?? 0,
-      scrollPosition: scrollPosition ?? 0,
-      completed: completed ?? false,
-    });
+    if (existing.length) {
+      await db.update(readingProgressTable)
+        .set({
+          progressPct: progressPct ?? existing[0].progressPct,
+          scrollPosition: scrollPosition ?? existing[0].scrollPosition,
+          completed: completed ?? existing[0].completed,
+        })
+        .where(eq(readingProgressTable.id, existing[0].id));
+    } else {
+      await db.insert(readingProgressTable).values({
+        userId,
+        contentId,
+        progressPct: progressPct ?? 0,
+        scrollPosition: scrollPosition ?? 0,
+        completed: completed ?? false,
+      });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("reading-progress save failed", err);
+    res.status(500).json({ error: "Failed to save reading progress" });
   }
-  res.json({ ok: true });
 });
 
 // ─── Notifications ─────────────────────────────────────────────────────────

@@ -125,9 +125,41 @@ export function WalletFundsPanel({ variant = "full" }: Props) {
 
   const sectionClass = "rounded-sm border bg-white p-5 sm:p-6 space-y-3";
   const borderStyle = { borderColor: "rgba(28,25,23,0.12)" };
+  const needsFunding = gatewayBal < 1;
 
   return (
     <div className="space-y-4">
+      {variant === "full" && needsFunding && (
+        <section
+          className="rounded-sm border p-5 sm:p-6 space-y-3"
+          style={{ borderColor: "rgba(200,150,12,0.35)", background: "rgba(200,150,12,0.06)" }}
+        >
+          <h2
+            className="text-sm font-semibold"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1C1917" }}
+          >
+            Get started with test USDC
+          </h2>
+          <p className="text-xs" style={{ color: "#57534E" }}>
+            New accounts start at 0 USDC. Follow these steps to unlock paid content on Arc testnet.
+          </p>
+          <ol className="text-xs space-y-2 list-decimal list-inside" style={{ color: "#44403C" }}>
+            <li>
+              <span className="font-medium">Activate wallet</span> — requests 5 test USDC from the platform treasury and sets up Gateway spending.
+            </li>
+            <li>
+              <span className="font-medium">Add USDC</span> (if Activate didn&apos;t fund you) — use the section below, then wait a few seconds and click Refresh.
+            </li>
+            <li>
+              <span className="font-medium">Deposit to Gateway</span> — move on-chain USDC into Gateway so you can unlock articles and gifts.
+            </li>
+          </ol>
+          <p className="text-xs" style={{ color: "#78716C" }}>
+            Gateway is for spending; on-chain is where creator earnings arrive. You need at least ~1 USDC in Gateway to unlock paid content.
+          </p>
+        </section>
+      )}
+
       <section className={sectionClass} style={borderStyle}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -162,7 +194,11 @@ export function WalletFundsPanel({ variant = "full" }: Props) {
               Gateway (spend)
             </dt>
             <dd className="mt-1 text-lg font-semibold" style={{ color: "#C8960C" }}>
-              {wallet.gatewayAvailable ?? "—"} USDC
+              {wallet.locked
+                ? "Locked"
+                : wallet.gatewayAvailable != null
+                  ? `${wallet.gatewayAvailable} USDC`
+                  : "— USDC"}
             </dd>
           </div>
           <div>
@@ -184,6 +220,12 @@ export function WalletFundsPanel({ variant = "full" }: Props) {
               {wallet.address}
             </dd>
           </div>
+        )}
+
+        {wallet.locked && (
+          <p className="text-xs" style={{ color: "#78716C" }}>
+            Unlock your wallet to view Gateway balance and deposit earnings for spending.
+          </p>
         )}
 
         <div className="flex flex-wrap gap-2 pt-1">

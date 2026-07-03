@@ -14,6 +14,28 @@
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
+    {
+      "source": "/content/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "User-Agent",
+          "value": "(?i)(bot|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|googlebot|bingpreview|pinterest|embedly|quora link preview|vkshare|w3c_validator|redditbot)"
+        }
+      ],
+      "destination": "/api/seo/content/:id/card"
+    },
+    {
+      "source": "/read/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "User-Agent",
+          "value": "(?i)(bot|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|googlebot|bingpreview|pinterest|embedly|quora link preview|vkshare|w3c_validator|redditbot)"
+        }
+      ],
+      "destination": "/api/seo/content/:id/card"
+    },
     { "source": "/((?!api/)(?!.*\\.).*)", "destination": "/index.html" }
   ],
   "build": {

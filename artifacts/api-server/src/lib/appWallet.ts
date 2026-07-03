@@ -31,6 +31,10 @@ const arcPublicClient = createPublicClient({
   transport: http(),
 });
 
+export async function getOnChainUsdcBalancePublic(address: Address): Promise<string> {
+  return (await getOnChainUsdcBalance(address)).toFixed(6);
+}
+
 async function getOnChainUsdcBalance(address: Address): Promise<number> {
   const balance = await arcPublicClient.readContract({
     address: ARC_USDC_ADDRESS,

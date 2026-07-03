@@ -17,6 +17,7 @@ import { AiWritingPanel } from "@/components/AiWritingPanel";
 import { FileUploadField } from "@/components/FileUploadField";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { Check, FileText, Music, Video } from "lucide-react";
 
 const createSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -185,375 +186,494 @@ export default function CreatePage() {
     }
   };
 
-  return (
-    <PlatformLayout>
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+  const isArticle = contentType === "article";
+  const isMedia = contentType === "audio" || contentType === "video";
+  const usesFocusLayout = isArticle || isMedia;
 
-        {/* Page header */}
-        <div className="mb-8">
-          <p className="editorial-label mb-2" style={{ color: "#78716C" }}>New piece</p>
-          <div style={{ borderTop: "2px solid #1C1917", marginBottom: "12px" }} />
-          <h1
+  const audioMediaField = (
+    <FileUploadField
+      label="Your audio"
+      hint="This is what listeners unlock and play — MP3, WAV, OGG, M4A, or WebM from your computer."
+      accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/webm"
+      value={form.watch("audioUrl") ?? ""}
+      onChange={url => form.setValue("audioUrl", url, { shouldValidate: true })}
+      preview="audio"
+      required
+      testId="input-audio-file"
+    />
+  );
+
+  const videoMediaField = (
+    <FileUploadField
+      label="Your video"
+      hint="This is what viewers unlock and watch — MP4, WebM, or MOV from your computer (max 50MB)."
+      accept="video/mp4,video/webm,video/quicktime"
+      value={form.watch("videoUrl") ?? ""}
+      onChange={url => form.setValue("videoUrl", url, { shouldValidate: true })}
+      preview="video"
+      required
+      testId="input-video-file"
+    />
+  );
+
+  const typePills = (inBar = false) => (
+    <div className={inBar ? "create-type-pills" : undefined} role="tablist" aria-label="Content type">
+      {(["article", "audio", "video"] as const).map((type) => {
+        const active = contentType === type;
+        const Icon = type === "article" ? FileText : type === "audio" ? Music : Video;
+        return (
+          <button
+            key={type}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => form.setValue("type", type)}
+            data-testid={`button-type-${type}`}
+            className={`create-type-pill${active ? " create-type-pill--active" : ""}`}
+          >
+            <Icon size={14} strokeWidth={2} aria-hidden />
+            <span>{type === "article" ? "Article" : type === "audio" ? "Audio" : "Video"}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const studioBar = (
+    <header className="create-studio-bar">
+      <div className="create-studio-bar-inner">
+        {typePills(true)}
+        <div className="create-studio-bar-end">
+          {lastAutosave && (
+            <span className="create-save-status">
+              <Check size={14} strokeWidth={2.5} aria-hidden />
+              Saved {lastAutosave.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+            </span>
+          )}
+          {isArticle && (
+            <button
+              type="button"
+              onClick={() => setMarkdownMode((v) => !v)}
+              className="create-studio-ghost-btn"
+            >
+              {markdownMode ? "Rich text" : "Markdown"}
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            data-testid="button-publish"
+            className="create-studio-publish-btn"
+          >
+            {isSubmitting
+              ? "Saving…"
+              : publishMode === "draft"
+                ? "Save draft"
+                : publishMode === "schedule"
+                  ? "Schedule"
+                  : "Publish"}
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+
+  const categoryField = (
+    <div>
+      <label style={labelStyle}>Category</label>
+      <select
+        {...form.register("categorySlug")}
+        data-testid="select-category"
+        style={{ ...inputStyle, fontFamily: "sans-serif" }}
+        onFocus={e => (e.currentTarget.style.borderColor = "#C8960C")}
+        onBlur={e => (e.currentTarget.style.borderColor = "rgba(28,25,23,0.18)")}
+      >
+        <option value="">Select a category…</option>
+        {categories?.map(cat => (
+          <option key={cat.slug} value={cat.slug}>{cat.name}</option>
+        ))}
+      </select>
+      {form.formState.errors.categorySlug && (
+        <p className="text-red-600 text-xs mt-1">{form.formState.errors.categorySlug.message}</p>
+      )}
+    </div>
+  );
+
+  const coverField = (
+    <>
+      <FileUploadField
+        label="Cover image"
+        hint="Shown on feed cards, homepage carousels, and your content page."
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        value={form.watch("coverImageUrl")}
+        onChange={url => form.setValue("coverImageUrl", url, { shouldValidate: true })}
+        preview="image"
+        required
+        testId="input-cover-image"
+      />
+      {form.formState.errors.coverImageUrl && (
+        <p className="text-red-600 text-xs mt-1">{form.formState.errors.coverImageUrl.message}</p>
+      )}
+    </>
+  );
+
+  const pricingField = (
+    <div>
+      <label style={labelStyle}>Price per read (USDC)</label>
+      <p style={{ fontSize: "11px", color: "#78716C", marginBottom: "8px", fontFamily: "sans-serif" }}>
+        You keep 95% of every payment. Set to 0 to publish free.
+      </p>
+      <div className="flex gap-2">
+        <div className="flex-1 relative">
+          <span
             style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: "clamp(1.5rem, 4vw, 2rem)",
+              position: "absolute",
+              left: "12px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "#C8960C",
               fontWeight: 700,
-              color: "#1C1917",
-              lineHeight: 1.2,
+              fontFamily: "sans-serif",
+            }}
+          >$</span>
+          <input
+            {...form.register("price")}
+            type="number"
+            step="0.000001"
+            min="0"
+            data-testid="input-price"
+            style={{ ...inputStyle, paddingLeft: "28px", fontFamily: "sans-serif" }}
+            onFocus={e => (e.currentTarget.style.borderColor = "#C8960C")}
+            onBlur={e => (e.currentTarget.style.borderColor = "rgba(28,25,23,0.18)")}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleGetAiSuggestion}
+          disabled={aiLoading}
+          data-testid="button-ai-suggestion"
+          className="px-4 py-2 text-sm font-medium transition-all disabled:opacity-50 whitespace-nowrap"
+          style={{
+            border: "1px solid rgba(28,25,23,0.18)",
+            background: "#FFFFFF",
+            color: "#78716C",
+            borderRadius: "2px",
+            fontFamily: "sans-serif",
+          }}
+        >
+          {aiLoading ? "Thinking…" : "AI Price Hint"}
+        </button>
+      </div>
+
+      {aiSuggestion && (
+        <div
+          className="mt-3 p-4"
+          style={{
+            background: "rgba(200,150,12,0.05)",
+            border: "1px solid rgba(200,150,12,0.25)",
+            borderRadius: "2px",
+          }}
+          data-testid="ai-suggestion-panel"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#78716C", fontFamily: "sans-serif" }}>
+                AI Suggestion
+              </span>
+              <span style={{
+                fontSize: "10px",
+                fontWeight: 600,
+                padding: "1px 6px",
+                borderRadius: "2px",
+                textTransform: "uppercase",
+                fontFamily: "sans-serif",
+                background: aiSuggestion.action === "raise" ? "rgba(22,163,74,0.1)" : aiSuggestion.action === "lower" ? "rgba(220,38,38,0.1)" : "rgba(200,150,12,0.1)",
+                color: aiSuggestion.action === "raise" ? "#16A34A" : aiSuggestion.action === "lower" ? "#DC2626" : "#C8960C",
+              }}>
+                {aiSuggestion.action}
+              </span>
+            </div>
+            <span style={{ color: "#C8960C", fontWeight: 700, fontFamily: "sans-serif" }}>${aiSuggestion.suggestedPrice} USDC</span>
+          </div>
+          <p style={{ fontSize: "12px", color: "#78716C", marginBottom: "10px", fontFamily: "sans-serif" }}>{aiSuggestion.reasoning}</p>
+          <button
+            type="button"
+            onClick={() => form.setValue("price", aiSuggestion.suggestedPrice)}
+            data-testid="button-accept-ai-suggestion"
+            style={{
+              fontSize: "11px",
+              padding: "4px 10px",
+              border: "1px solid rgba(200,150,12,0.3)",
+              background: "transparent",
+              color: "#C8960C",
+              borderRadius: "2px",
+              cursor: "pointer",
+              fontFamily: "sans-serif",
             }}
           >
-            {t("create.title")}
-          </h1>
-          <p style={{ fontSize: "0.875rem", color: "#78716C", marginTop: "6px" }}>
-            Keep 95% of every payment. No gatekeeping — publish freely.
-          </p>
-          {lastAutosave && (
-            <p className="text-xs mt-1" style={{ color: "#A8A29E" }}>Draft autosaved {lastAutosave.toLocaleTimeString()}</p>
-          )}
+            Accept suggestion
+          </button>
         </div>
+      )}
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" data-testid="form-create-content">
+      {form.formState.errors.price && (
+        <p className="text-red-600 text-xs mt-1">{form.formState.errors.price.message}</p>
+      )}
+    </div>
+  );
 
-          {/* Title */}
-          <div>
-            <label style={labelStyle}>Title</label>
-            <input
-              {...form.register("title")}
-              placeholder="Give your piece a compelling title…"
-              data-testid="input-title"
-              style={{ ...inputStyle, fontFamily: "'Playfair Display', Georgia, serif", fontSize: "1.1rem" }}
-              onFocus={e => (e.currentTarget.style.borderColor = "#C8960C")}
-              onBlur={e => (e.currentTarget.style.borderColor = "rgba(28,25,23,0.18)")}
-            />
-            {form.formState.errors.title && (
-              <p className="text-red-600 text-xs mt-1">{form.formState.errors.title.message}</p>
-            )}
-          </div>
+  const submitButton = (
+    <div>
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        data-testid="button-publish"
+        className="w-full py-3 font-semibold text-sm transition-all disabled:opacity-60"
+        style={{
+          background: "#1C1917",
+          color: "#FAF7F2",
+          borderRadius: "2px",
+          fontFamily: "sans-serif",
+          letterSpacing: "0.04em",
+        }}
+      >
+        {isSubmitting
+          ? "Saving…"
+          : publishMode === "draft"
+            ? t("create.draft")
+            : publishMode === "schedule"
+              ? "Schedule piece"
+              : t("create.publish")}
+      </button>
+      {submitError && (
+        <p className="text-red-600 text-sm text-center mt-3">Failed to publish. Please try again.</p>
+      )}
+    </div>
+  );
 
-          {/* Type */}
-          <div>
-            <label style={labelStyle}>Content type</label>
-            <div className="flex gap-2">
-              {(["article", "audio", "video"] as const).map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => form.setValue("type", type)}
-                  data-testid={`button-type-${type}`}
-                  className="flex-1 py-2.5 text-sm font-medium transition-all"
-                  style={{
-                    background: contentType === type ? "#1C1917" : "#FFFFFF",
-                    border: `1px solid ${contentType === type ? "#1C1917" : "rgba(28,25,23,0.18)"}`,
-                    color: contentType === type ? "#FAF7F2" : "#78716C",
-                    borderRadius: "2px",
-                    fontFamily: "sans-serif",
-                    letterSpacing: "0.03em",
-                  }}
-                >
-                  {type === "article" ? "✍ Article" : type === "audio" ? "♪ Audio" : "▶ Video"}
-                </button>
-              ))}
-            </div>
-          </div>
+  return (
+    <PlatformLayout>
+      <div className={usesFocusLayout ? "create-page--studio" : undefined}>
+      <div className={usesFocusLayout ? "create-composer-wrap" : "max-w-2xl mx-auto px-4 sm:px-6 py-10"}>
 
-          {/* Category */}
-          <div>
-            <label style={labelStyle}>Category</label>
-            <select
-              {...form.register("categorySlug")}
-              data-testid="select-category"
-              style={{ ...inputStyle, fontFamily: "sans-serif" }}
-              onFocus={e => (e.currentTarget.style.borderColor = "#C8960C")}
-              onBlur={e => (e.currentTarget.style.borderColor = "rgba(28,25,23,0.18)")}
-            >
-              <option value="">Select a category…</option>
-              {categories?.map(cat => (
-                <option key={cat.slug} value={cat.slug}>{cat.name}</option>
-              ))}
-            </select>
-            {form.formState.errors.categorySlug && (
-              <p className="text-red-600 text-xs mt-1">{form.formState.errors.categorySlug.message}</p>
-            )}
-          </div>
-
-          {/* Cover image */}
-          <FileUploadField
-            label="Cover image"
-            hint="Shown on feed cards, homepage carousels, and your content page."
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            value={form.watch("coverImageUrl")}
-            onChange={url => form.setValue("coverImageUrl", url, { shouldValidate: true })}
-            preview="image"
-            required
-            testId="input-cover-image"
-          />
-          {form.formState.errors.coverImageUrl && (
-            <p className="text-red-600 text-xs mt-1">{form.formState.errors.coverImageUrl.message}</p>
-          )}
-
-          {/* AI assistant */}
-          <AiWritingPanel
-            title={title}
-            body={body ?? ""}
-            category={form.watch("categorySlug")}
-            tags={tags}
-            onTitle={(t) => form.setValue("title", t)}
-            onBody={(b) => form.setValue("body", b)}
-            onTags={setTags}
-            onMeta={setMetaDescription}
-          />
-
-          {/* Tags */}
-          <div>
-            <label style={labelStyle}>Tags</label>
-            <input value={tags} onChange={e => setTags(e.target.value)} placeholder="AI, Africa, Architecture (comma-separated)" style={inputStyle} />
-          </div>
-
-          {/* SEO */}
-          <div>
-            <label style={labelStyle}>SEO meta description (optional)</label>
-            <textarea value={metaDescription} onChange={e => setMetaDescription(e.target.value)} rows={4} className="prose-textarea" style={{ resize: "none" }} placeholder="Shown in search results and social previews" />
-          </div>
-
-          {/* Publish mode */}
-          <div>
-            <label style={labelStyle}>When to publish</label>
-            <div className="flex gap-2 flex-wrap">
-              {(["now", "draft", "schedule"] as const).map(mode => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setPublishMode(mode)}
-                  className="px-4 py-2 text-sm"
-                  style={{
-                    background: publishMode === mode ? "#1C1917" : "#FFFFFF",
-                    color: publishMode === mode ? "#FAF7F2" : "#78716C",
-                    border: `1px solid ${publishMode === mode ? "#1C1917" : "rgba(28,25,23,0.18)"}`,
-                    borderRadius: "2px",
-                  }}
-                >
-                  {mode === "now" ? "Publish now" : mode === "draft" ? "Save draft" : "Schedule"}
-                </button>
-              ))}
-            </div>
-            {publishMode === "schedule" && (
-              <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} className="mt-3 w-full" style={inputStyle} />
-            )}
-          </div>
-
-          {/* Article body */}
-          {contentType === "article" && (
-            <>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>Article body</label>
-                  <button type="button" onClick={() => setMarkdownMode(v => !v)} className="text-xs px-2 py-1" style={{ border: "1px solid rgba(28,25,23,0.15)", color: "#78716C", borderRadius: "2px" }}>
-                    {markdownMode ? "Rich text" : "Markdown"}
-                  </button>
-                </div>
-                <p style={{ fontSize: "11px", color: "#78716C", marginBottom: "8px", fontFamily: "sans-serif" }}>
-                  Paste from Word, Google Docs, or write in Markdown.
-                </p>
-                {markdownMode ? (
-                  <MarkdownEditor value={form.watch("body") ?? ""} onChange={(v) => form.setValue("body", v)} />
-                ) : (
-                <TipTapEditor
-                  value={form.watch("body") ?? ""}
-                  onChange={(html) => form.setValue("body", html)}
-                  placeholder="Write or paste your article here…"
-                />
-                )}
-              </div>
-              <div>
-                <label style={labelStyle}>Preview teaser</label>
-                <p style={{ fontSize: "11px", color: "#78716C", marginBottom: "8px", fontFamily: "sans-serif" }}>
-                  Shown to readers before they pay. Leave blank to auto-generate from the first paragraph.
-                </p>
-                <textarea
-                  {...form.register("previewText")}
-                  rows={5}
-                  placeholder="Hook your audience — a sentence or two that makes them want to read more…"
-                  data-testid="textarea-preview"
-                  className="prose-textarea"
-                  style={{ resize: "none" }}
-                  onFocus={e => (e.currentTarget.style.borderColor = "#C8960C")}
-                  onBlur={e => (e.currentTarget.style.borderColor = "rgba(28,25,23,0.18)")}
-                />
-              </div>
-            </>
-          )}
-
-          {contentType === "audio" && (
-            <>
-              <FileUploadField
-                label="Audio file"
-                hint="MP3, WAV, OGG, or other supported audio from your computer."
-                accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/webm"
-                value={form.watch("audioUrl") ?? ""}
-                onChange={url => form.setValue("audioUrl", url, { shouldValidate: true })}
-                preview="audio"
-                required
-                testId="input-audio-file"
-              />
-              {form.formState.errors.audioUrl && (
-                <p className="text-red-600 text-xs mt-1">{form.formState.errors.audioUrl.message}</p>
-              )}
-            </>
-          )}
-
-          {contentType === "video" && (
-            <>
-              <FileUploadField
-                label="Video file"
-                hint="MP4 or WebM from your computer (max 50MB)."
-                accept="video/mp4,video/webm,video/quicktime"
-                value={form.watch("videoUrl") ?? ""}
-                onChange={url => form.setValue("videoUrl", url, { shouldValidate: true })}
-                preview="video"
-                required
-                testId="input-video-file"
-              />
-              {form.formState.errors.videoUrl && (
-                <p className="text-red-600 text-xs mt-1">{form.formState.errors.videoUrl.message}</p>
-              )}
-            </>
-          )}
-
-          {/* Pricing */}
-          <div>
-            <label style={labelStyle}>Price per read (USDC)</label>
-            <p style={{ fontSize: "11px", color: "#78716C", marginBottom: "8px", fontFamily: "sans-serif" }}>
-              You keep 95% of every payment. Set to 0 to publish free.
-            </p>
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "#C8960C",
-                    fontWeight: 700,
-                    fontFamily: "sans-serif",
-                  }}
-                >$</span>
-                <input
-                  {...form.register("price")}
-                  type="number"
-                  step="0.000001"
-                  min="0"
-                  data-testid="input-price"
-                  style={{ ...inputStyle, paddingLeft: "28px", fontFamily: "sans-serif" }}
-                  onFocus={e => (e.currentTarget.style.borderColor = "#C8960C")}
-                  onBlur={e => (e.currentTarget.style.borderColor = "rgba(28,25,23,0.18)")}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleGetAiSuggestion}
-                disabled={aiLoading}
-                data-testid="button-ai-suggestion"
-                className="px-4 py-2 text-sm font-medium transition-all disabled:opacity-50 whitespace-nowrap"
-                style={{
-                  border: "1px solid rgba(28,25,23,0.18)",
-                  background: "#FFFFFF",
-                  color: "#78716C",
-                  borderRadius: "2px",
-                  fontFamily: "sans-serif",
-                }}
-              >
-                {aiLoading ? "Thinking…" : "AI Price Hint"}
-              </button>
-            </div>
-
-            {aiSuggestion && (
-              <div
-                className="mt-3 p-4"
-                style={{
-                  background: "rgba(200,150,12,0.05)",
-                  border: "1px solid rgba(200,150,12,0.25)",
-                  borderRadius: "2px",
-                }}
-                data-testid="ai-suggestion-panel"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#78716C", fontFamily: "sans-serif" }}>
-                      AI Suggestion
-                    </span>
-                    <span style={{
-                      fontSize: "10px",
-                      fontWeight: 600,
-                      padding: "1px 6px",
-                      borderRadius: "2px",
-                      textTransform: "uppercase",
-                      fontFamily: "sans-serif",
-                      background: aiSuggestion.action === "raise" ? "rgba(22,163,74,0.1)" : aiSuggestion.action === "lower" ? "rgba(220,38,38,0.1)" : "rgba(200,150,12,0.1)",
-                      color: aiSuggestion.action === "raise" ? "#16A34A" : aiSuggestion.action === "lower" ? "#DC2626" : "#C8960C",
-                    }}>
-                      {aiSuggestion.action}
-                    </span>
-                  </div>
-                  <span style={{ color: "#C8960C", fontWeight: 700, fontFamily: "sans-serif" }}>${aiSuggestion.suggestedPrice} USDC</span>
-                </div>
-                <p style={{ fontSize: "12px", color: "#78716C", marginBottom: "10px", fontFamily: "sans-serif" }}>{aiSuggestion.reasoning}</p>
-                <button
-                  type="button"
-                  onClick={() => form.setValue("price", aiSuggestion.suggestedPrice)}
-                  data-testid="button-accept-ai-suggestion"
-                  style={{
-                    fontSize: "11px",
-                    padding: "4px 10px",
-                    border: "1px solid rgba(200,150,12,0.3)",
-                    background: "transparent",
-                    color: "#C8960C",
-                    borderRadius: "2px",
-                    cursor: "pointer",
-                    fontFamily: "sans-serif",
-                  }}
-                >
-                  Accept suggestion
-                </button>
-              </div>
-            )}
-
-            {form.formState.errors.price && (
-              <p className="text-red-600 text-xs mt-1">{form.formState.errors.price.message}</p>
-            )}
-          </div>
-
-          {/* Divider */}
-          <div style={{ borderTop: "1px solid rgba(28,25,23,0.1)" }} />
-
-          {/* Submit */}
-          <div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              data-testid="button-publish"
-              className="w-full py-3 font-semibold text-sm transition-all disabled:opacity-60"
+        {!usesFocusLayout && (
+          <div className="mb-8">
+            <p className="editorial-label mb-2" style={{ color: "#78716C" }}>New piece</p>
+            <div style={{ borderTop: "2px solid #1C1917", marginBottom: "12px" }} />
+            <h1
               style={{
-                background: "#1C1917",
-                color: "#FAF7F2",
-                borderRadius: "2px",
-                fontFamily: "sans-serif",
-                letterSpacing: "0.04em",
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: "clamp(1.5rem, 4vw, 2rem)",
+                fontWeight: 700,
+                color: "#1C1917",
+                lineHeight: 1.2,
               }}
             >
-              {isSubmitting
-                ? "Saving…"
-                : publishMode === "draft"
-                  ? t("create.draft")
-                  : publishMode === "schedule"
-                    ? "Schedule piece"
-                    : t("create.publish")}
-            </button>
-            {submitError && (
-              <p className="text-red-600 text-sm text-center mt-3">Failed to publish. Please try again.</p>
+              {t("create.title")}
+            </h1>
+            <p style={{ fontSize: "0.875rem", color: "#78716C", marginTop: "6px" }}>
+              Keep 95% of every payment. No gatekeeping — publish freely.
+            </p>
+            {lastAutosave && (
+              <p className="text-xs mt-1" style={{ color: "#A8A29E" }}>Draft autosaved {lastAutosave.toLocaleTimeString()}</p>
             )}
           </div>
+        )}
+
+        <form onSubmit={form.handleSubmit(onSubmit)} className={usesFocusLayout ? "create-studio-form" : "space-y-6"} data-testid="form-create-content">
+
+          {usesFocusLayout && studioBar}
+
+          {isArticle ? (
+            <>
+              <section className="create-composer-sheet">
+                <input
+                  {...form.register("title")}
+                  placeholder="Title"
+                  data-testid="input-title"
+                  className="create-composer-title"
+                />
+                {form.formState.errors.title && (
+                  <p className="text-red-600 text-xs mb-2">{form.formState.errors.title.message}</p>
+                )}
+
+                {markdownMode ? (
+                  <MarkdownEditor
+                    variant="composer"
+                    value={form.watch("body") ?? ""}
+                    onChange={(v) => form.setValue("body", v)}
+                    placeholder="Start writing — the page grows as you go…"
+                  />
+                ) : (
+                  <TipTapEditor
+                    variant="composer"
+                    value={form.watch("body") ?? ""}
+                    onChange={(html) => form.setValue("body", html)}
+                    placeholder="Start writing — paste from Word or Google Docs, or type here. The page grows as you go."
+                  />
+                )}
+              </section>
+
+              <div className="create-composer-meta">
+                <div className="create-composer-meta-intro">
+                  <h2>Publishing</h2>
+                  <p>Cover, category, and price — set these when you are ready to go live.</p>
+                </div>
+                <div className="create-composer-meta-panel">
+                  <h3>Preview teaser</h3>
+                  <p style={{ fontSize: "11px", color: "#78716C", marginBottom: "8px", fontFamily: "sans-serif" }}>
+                    Shown before readers pay. Leave blank to auto-generate from your opening.
+                  </p>
+                  <textarea
+                    {...form.register("previewText")}
+                    rows={3}
+                    placeholder="A sentence or two that hooks your audience…"
+                    data-testid="textarea-preview"
+                    className="prose-textarea"
+                    style={{ resize: "vertical", minHeight: "5rem" }}
+                  />
+                </div>
+
+                <div className="create-composer-meta-panel space-y-5">
+                  {categoryField}
+                  {coverField}
+                  <AiWritingPanel
+                    title={title}
+                    body={body ?? ""}
+                    category={form.watch("categorySlug")}
+                    tags={tags}
+                    onTitle={(t) => form.setValue("title", t)}
+                    onBody={(b) => form.setValue("body", b)}
+                    onTags={setTags}
+                    onMeta={setMetaDescription}
+                  />
+                  <div>
+                    <label style={labelStyle}>Tags</label>
+                    <input value={tags} onChange={e => setTags(e.target.value)} placeholder="AI, Africa, Architecture (comma-separated)" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>SEO meta description (optional)</label>
+                    <textarea value={metaDescription} onChange={e => setMetaDescription(e.target.value)} rows={3} className="prose-textarea" style={{ resize: "vertical" }} placeholder="Shown in search results and social previews" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>When to publish</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {(["now", "draft", "schedule"] as const).map(mode => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setPublishMode(mode)}
+                          className="px-4 py-2 text-sm"
+                          style={{
+                            background: publishMode === mode ? "#1C1917" : "#FFFFFF",
+                            color: publishMode === mode ? "#FAF7F2" : "#78716C",
+                            border: `1px solid ${publishMode === mode ? "#1C1917" : "rgba(28,25,23,0.18)"}`,
+                            borderRadius: "2px",
+                          }}
+                        >
+                          {mode === "now" ? "Publish now" : mode === "draft" ? "Save draft" : "Schedule"}
+                        </button>
+                      ))}
+                    </div>
+                    {publishMode === "schedule" && (
+                      <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} className="mt-3 w-full" style={inputStyle} />
+                    )}
+                  </div>
+                </div>
+
+                <div className="create-composer-meta-panel">
+                  {pricingField}
+                </div>
+
+                <div className="create-composer-meta-submit">
+                  {submitButton}
+                  {submitError && (
+                    <p className="text-red-600 text-sm text-center mt-3">Failed to publish. Please try again.</p>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : isMedia ? (
+            <>
+              <section className="create-composer-sheet create-media-sheet">
+                <input
+                  {...form.register("title")}
+                  placeholder="Title"
+                  data-testid="input-title"
+                  className="create-composer-title"
+                />
+                {form.formState.errors.title && (
+                  <p className="text-red-600 text-xs mb-3">{form.formState.errors.title.message}</p>
+                )}
+
+                <div className="create-media-primary">
+                  {contentType === "audio" ? audioMediaField : videoMediaField}
+                  {contentType === "audio" && form.formState.errors.audioUrl && (
+                    <p className="text-red-600 text-xs mt-1">{form.formState.errors.audioUrl.message}</p>
+                  )}
+                  {contentType === "video" && form.formState.errors.videoUrl && (
+                    <p className="text-red-600 text-xs mt-1">{form.formState.errors.videoUrl.message}</p>
+                  )}
+                </div>
+              </section>
+
+              <div className="create-composer-meta">
+                <div className="create-composer-meta-intro">
+                  <h2>Publishing</h2>
+                  <p>Category, cover art, and pricing for your {contentType}.</p>
+                </div>
+                <div className="create-composer-meta-panel space-y-5">
+                  {categoryField}
+                  {coverField}
+                  <div>
+                    <label style={labelStyle}>Tags</label>
+                    <input value={tags} onChange={e => setTags(e.target.value)} placeholder="podcast, interview, Africa (comma-separated)" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>SEO meta description (optional)</label>
+                    <textarea value={metaDescription} onChange={e => setMetaDescription(e.target.value)} rows={3} className="prose-textarea" style={{ resize: "vertical" }} placeholder="Shown in search results and social previews" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>When to publish</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {(["now", "draft", "schedule"] as const).map(mode => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setPublishMode(mode)}
+                          className="px-4 py-2 text-sm"
+                          style={{
+                            background: publishMode === mode ? "#1C1917" : "#FFFFFF",
+                            color: publishMode === mode ? "#FAF7F2" : "#78716C",
+                            border: `1px solid ${publishMode === mode ? "#1C1917" : "rgba(28,25,23,0.18)"}`,
+                            borderRadius: "2px",
+                          }}
+                        >
+                          {mode === "now" ? "Publish now" : mode === "draft" ? "Save draft" : "Schedule"}
+                        </button>
+                      ))}
+                    </div>
+                    {publishMode === "schedule" && (
+                      <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} className="mt-3 w-full" style={inputStyle} />
+                    )}
+                  </div>
+                </div>
+
+                <div className="create-composer-meta-panel">
+                  {pricingField}
+                </div>
+
+                <div className="create-composer-meta-submit">
+                  {submitButton}
+                  {submitError && (
+                    <p className="text-red-600 text-sm text-center mt-3">Failed to publish. Please try again.</p>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : null}
         </form>
+      </div>
       </div>
     </PlatformLayout>
   );

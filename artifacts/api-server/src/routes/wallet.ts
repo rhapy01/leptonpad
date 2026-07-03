@@ -6,6 +6,7 @@ import {
   depositToGateway,
   fundWalletFromTreasury,
   getAppWalletStatus,
+  getOnChainUsdcBalancePublic,
   withdrawFromGateway,
   registerClientWalletAddress,
   markClientGatewayReady,
@@ -46,6 +47,10 @@ router.get("/", async (req, res): Promise<void> => {
     const status = await getAppWalletStatus(userId);
     if (!isWalletUnlocked(req, userId)) {
       const addr = status.address;
+      const onChainBalance =
+        addr && !status.mockMode
+          ? await getOnChainUsdcBalancePublic(addr as Address).catch(() => null)
+          : null;
       res.json({
         locked: true,
         address: addr,
@@ -53,6 +58,8 @@ router.get("/", async (req, res): Promise<void> => {
         gatewayReady: status.gatewayReady,
         mockMode: status.mockMode,
         clientSide: status.clientSide,
+        onChainBalance,
+        walletBalance: onChainBalance,
       });
       return;
     }

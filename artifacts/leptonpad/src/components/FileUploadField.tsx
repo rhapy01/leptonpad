@@ -40,7 +40,7 @@ export function FileUploadField({
     try {
       const result = await uploadMedia(file);
       onChange(result.url);
-      toast({ title: "Photo updated" });
+      toast({ title: preview === "audio" ? "Audio uploaded" : preview === "video" ? "Video uploaded" : "Upload complete" });
     } catch (e) {
       toast({
         title: "Upload failed",
@@ -158,6 +158,13 @@ export function FileUploadField({
     );
   }
 
+  const dropLabel =
+    preview === "audio"
+      ? (value ? "Replace audio" : "Upload audio file")
+      : preview === "video"
+        ? (value ? "Replace video" : "Upload video file")
+        : (value ? "Replace file" : "Upload file");
+
   return (
     <div className="upload-field">
       {hiddenInput}
@@ -173,7 +180,7 @@ export function FileUploadField({
         className={`upload-dropzone${dragOver ? " upload-dropzone--drag" : ""}`}
       >
         <span className="upload-dropzone-title">
-          {uploading ? "Uploading…" : value ? "Replace file" : "Upload file"}
+          {uploading ? "Uploading…" : dropLabel}
         </span>
         <span className="upload-dropzone-sub">Drag and drop, or click to browse</span>
       </button>
@@ -193,8 +200,8 @@ export function FileUploadField({
           Remove file
         </button>
       )}
-      {!value && required && (
-        <p className="mt-1 text-xs text-red-600">A file is required</p>
+      {!value && required && preview !== "image" && preview !== "banner" && preview !== "avatar" && (
+        <p className="mt-1 text-xs text-red-600">Upload your {preview === "audio" ? "audio" : preview === "video" ? "video" : "file"} to continue</p>
       )}
     </div>
   );

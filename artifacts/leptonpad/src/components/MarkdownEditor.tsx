@@ -6,9 +6,10 @@ interface MarkdownEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  variant?: "default" | "composer";
 }
 
-export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onChange, placeholder, variant = "default" }: MarkdownEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -23,8 +24,10 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
     }
   };
 
+  const isComposer = variant === "composer";
+
   return (
-    <div>
+    <div className={isComposer ? "create-composer-markdown-wrap" : undefined}>
       <div className="flex gap-2 mb-2">
         <input
           ref={inputRef}
@@ -50,13 +53,15 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder ?? "Write in Markdown…"}
-        rows={18}
-        className="prose-textarea font-mono"
-        style={{ minHeight: "420px" }}
+        rows={isComposer ? 1 : 18}
+        className={`prose-textarea${isComposer ? " create-composer-markdown" : " font-mono"}`}
+        style={isComposer ? undefined : { minHeight: "420px" }}
       />
-      <p className="text-xs mt-2" style={{ color: "#A8A29E" }}>
-        Supports **bold**, *italic*, # headings, images, and [links](url).
-      </p>
+      {!isComposer && (
+        <p className="text-xs mt-2" style={{ color: "#A8A29E" }}>
+          Supports **bold**, *italic*, # headings, images, and [links](url).
+        </p>
+      )}
     </div>
   );
 }
